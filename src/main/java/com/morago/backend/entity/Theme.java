@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
@@ -20,44 +21,64 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Entity
-@Table(name = "files")
+@Table(name = "themes")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @EntityListeners(AuditingEntityListener.class)
-public class File {
+public class Theme {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @CreatedDate
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "original_title")
-    private String originalTitle;
+    @Column(name = "name", nullable = false, unique = true, length = 200)
+    private String name;
 
-    @Column(name = "path")
-    private String path;
+    @Column(name = "korean_title", length = 200)
+    private String koreanTitle;
 
-    @Column(name = "type", length = 100)
-    private String type;
+    @Column(name = "price", precision = 10, scale = 2)
+    private BigDecimal price;
+
+    @Column(name = "night_price", precision = 10, scale = 2)
+    private BigDecimal nightPrice;
+
+    @Column(name = "description", length = 500)
+    private String description;
+
+    @Column(name = "is_popular")
+    private Boolean isPopular;
 
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @OneToOne
-    @JoinColumn(name = "icon_id")
-    private Theme themes;
+    @Column(name = "is_active")
+    private Boolean isActive;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "image_id")
-    private User image;
+    @JoinColumn(name = "category_id")
+    private Category category;
+
+
+    @ManyToMany(mappedBy = "themes")
+    private Set<TranslatorProfile> translators;
+
+    @OneToOne
+    private File icon;
+
+
+
 }
