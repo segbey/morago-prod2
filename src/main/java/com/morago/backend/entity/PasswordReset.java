@@ -9,7 +9,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,47 +16,42 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "files")
+@Table(name = "password_resets")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @EntityListeners(AuditingEntityListener.class)
-public class File {
+public class PasswordReset {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @CreatedDate
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "original_title")
-    private String originalTitle;
-
-    @Column(name = "path")
-    private String path;
-
-    @Column(name = "type", length = 100)
-    private String type;
-
-    @LastModifiedDate
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @OneToOne
-    @JoinColumn(name = "icon_id")
-    private Theme themes;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "image_id")
-    private User image;
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+
+    @Column(name ="token", unique = true)
+    private String token;
+
+    @Column(name ="phone", length = 100)
+    private String phone;
+
+    @Column(name ="reset_code")
+    private Integer resetCode;
+
+
+
 }
