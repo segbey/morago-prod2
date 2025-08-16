@@ -42,7 +42,6 @@ public class PasswordReset {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-
     @Column(name ="token", unique = true)
     private String token;
 

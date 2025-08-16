@@ -32,8 +32,6 @@ public class Notification {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
-    //@Column(name = "user_id", length = 50)
-    //private String userId;
 
     @Column(name = "title", length = 200)
     private String title;
@@ -42,10 +40,12 @@ public class Notification {
     private String text;
 
     @Column(name = "date_time")
-    private LocalDateTime dateTime;
+    private LocalDateTime dateTime;//это время получения уведомления?
 
     @Column(name = "error_time")
-    private LocalDateTime errorTime;
+    private LocalDateTime errorTime;//что это?(Лола)
 
-
+    @Column(name = "is_read", nullable = false)
+    @Builder.Default
+    private boolean read = false;
 }

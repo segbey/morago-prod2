@@ -1,5 +1,6 @@
 package com.morago.backend.entity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -10,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotBlank;
@@ -60,7 +62,7 @@ public class User implements UserDetails {
     private BigDecimal balance;
 
     @CreatedDate
-    @Column(updatable = false)
+    @Column(updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
     @LastModifiedDate
@@ -81,11 +83,11 @@ public class User implements UserDetails {
     )
     private Set<Role> roles;
 
-//    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-//    private UserProfile userProfile;
-//
-//    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-//    private TranslatorProfile translatorProfile;
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private UserProfile userProfile;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private TranslatorProfile translatorProfile;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -113,4 +115,15 @@ public class User implements UserDetails {
     public boolean isEnabled() {
         return isActive;
     }
+
+    public void setUserProfile(UserProfile p) {
+        this.userProfile = p;
+        if (p != null) p.setUser(this);
+    }
+
+    public void setTranslatorProfile(TranslatorProfile p) {
+        this.translatorProfile = p;
+        if (p != null) p.setUser(this);
+    }
+
 }

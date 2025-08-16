@@ -5,11 +5,7 @@ import com.morago.backend.config.utils.JWTUtils;
 import com.morago.backend.dto.tokens.JWTResponse;
 import com.morago.backend.entity.RefreshToken;
 import com.morago.backend.entity.User;
-import com.morago.backend.exception.ExpireJwtTokenException;
-import com.morago.backend.exception.RefreshTokenNotFoundException;
-import com.morago.backend.exception.UserNotFoundException;
 import com.morago.backend.repository.RefreshTokenRepository;
-import com.morago.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,15 +19,13 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class RefreshTokenServiceImpl implements RefreshTokenService{
     private final RefreshTokenRepository refreshTokenRepository;
-    private final UserRepository userRepository;
+    private final UserService userService;
     private final JWTProperties jwtProperties;
     private final JWTUtils jwtUtils;
 
     @Override
-    public RefreshToken createRefreshToken(String username, String jwtTokenString) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UserNotFoundException(username));
-
+    public void createRefreshToken(String username, String jwtTokenString) {
+        User user = userService.findByUsernameOrThrow(username);
         RefreshToken token = RefreshToken.builder()
                 .token(jwtTokenString)
                 .user(user)
@@ -39,7 +33,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService{
                 .expirationTime(LocalDateTime.now().plus(Duration.ofMillis(jwtProperties.getRefreshExpirationMs())))
                 .build();
 
-        return refreshTokenRepository.save(token);
+        refreshTokenRepository.save(token);
     }
 
     @Override
@@ -65,14 +59,9 @@ public class RefreshTokenServiceImpl implements RefreshTokenService{
     }
 
     @Override
+    @Transactional
     public JWTResponse refreshToken(String requestRefreshToken) {
-        RefreshToken refreshToken = findByToken(requestRefreshToken)
-                .orElseThrow(RefreshTokenNotFoundException::new);
-
-        if (isRefreshTokenExpired(refreshToken)) {
-            deleteByToken(requestRefreshToken);
-            throw new ExpireJwtTokenException();
-        }
+        RefreshToken refreshToken = getValidTokenOrThrow(requestRefreshToken);
 
         User user = refreshToken.getUser();
         String newAccessToken = jwtUtils.generateAccessToken(user);
@@ -86,8 +75,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService{
 
     @Override
     public void logoutUserByRefreshToken(String refreshTokenStr) {
-        RefreshToken refreshToken = findByToken(refreshTokenStr)
-                .orElseThrow(RefreshTokenNotFoundException::new);
+        RefreshToken refreshToken = findByTokenOrThrow(refreshTokenStr);
 
         deleteByUser(refreshToken.getUser());
     }
