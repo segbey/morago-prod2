@@ -26,7 +26,6 @@ public class TestUserSeeder implements CommandLineRunner {
     public void run(String... args) {
         final String phone = "01012345673";
 
-        // если уже есть — выходим
         if (userRepository.existsByUsername(phone)) {
             return;
         }
