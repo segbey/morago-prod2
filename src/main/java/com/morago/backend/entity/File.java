@@ -9,7 +9,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -37,27 +36,23 @@ public class File {
     private Long id;
 
     @CreatedDate
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at", updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "original_title")
     private String originalTitle;
 
-    @Column(name = "path")
+    @Column(name = "path", length = 512, nullable = false, unique = true)
     private String path;
 
     @Column(name = "type", length = 100)
     private String type;
 
     @LastModifiedDate
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @OneToOne
-    @JoinColumn(name = "icon_id")
-    private Theme themes;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "image_id")
-    private User image;
+    @JoinColumn(name = "user_id")
+    private User user;
 }

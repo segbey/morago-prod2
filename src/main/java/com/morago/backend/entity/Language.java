@@ -34,13 +34,19 @@ public class Language {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @org.hibernate.annotations.NaturalId
     @Column(name = "name", nullable = false, unique = true, length = 200)
     private String name;
+
+    @org.springframework.data.annotation.CreatedDate
+    @Column(name = "created_at", updatable = false, nullable = false)
+    private LocalDateTime createdAt;
 
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
     @ManyToMany(mappedBy = "languages")
+    @Builder.Default
     private Set<TranslatorProfile> translatorProfiles = new HashSet<>();
 }
