@@ -40,7 +40,7 @@ public class Theme {
     private Long id;
 
     @CreatedDate
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "name", nullable = false, unique = true, length = 200)
@@ -59,26 +59,26 @@ public class Theme {
     private String description;
 
     @Column(name = "is_popular")
-    private Boolean isPopular;
+    @Builder.Default
+    private boolean isPopular = false;
 
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     @Column(name = "is_active")
-    private Boolean isActive;
+    @Builder.Default
+    private boolean isActive = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
 
-
     @ManyToMany(mappedBy = "themes")
-    private Set<TranslatorProfile> translators;
+    @Builder.Default
+    private Set<TranslatorProfile> translators = new java.util.HashSet<>();
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "icon_file_id", unique = true)
     private File icon;
-
-
-
 }
