@@ -11,4 +11,11 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
     Optional<Role> findByName(Roles name);
     List<Role> findAllByName(Roles name);
 
+    default Optional<Role> findByNameEnum(String name) {
+        try {
+            return findByName(Roles.valueOf(name));
+        } catch (IllegalArgumentException ex) {
+            return Optional.empty();
+        }
+    }
 }
