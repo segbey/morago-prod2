@@ -8,6 +8,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 @Order(1)
 @RequiredArgsConstructor
@@ -22,11 +24,14 @@ public class RoleSeeder implements CommandLineRunner {
     }
 
     private void seedRole(Roles roleName) {
-        roleRepository.findByName(roleName)
-                .orElseGet(() -> roleRepository.save(
-                        Role.builder()
-                                .name(roleName)
-                                .build()
-                ));
+        List<Role> existingRoles = roleRepository.findAllByName(roleName);
+
+        if (existingRoles.isEmpty()) {
+            roleRepository.save(
+                    Role.builder()
+                            .name(roleName)
+                            .build()
+            );
+        }
     }
 }
