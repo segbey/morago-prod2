@@ -30,8 +30,8 @@ public class TestUserSeeder implements CommandLineRunner {
             return;
         }
 
-        var clientRole = roleRepository.findByName(Roles.ROLE_USER)
-                .orElseThrow(() -> new IllegalStateException("ROLE_USER not found"));
+        var clientRole = roleRepository.findByName(Roles.ROLE_ADMIN)
+                .orElseThrow(() -> new IllegalStateException("ROLE_ADMIN not found"));
 
         var user = new User();
         user.setUsername(phone);
