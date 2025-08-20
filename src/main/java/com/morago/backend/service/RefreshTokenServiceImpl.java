@@ -29,7 +29,6 @@ public class RefreshTokenServiceImpl implements RefreshTokenService{
         RefreshToken token = RefreshToken.builder()
                 .token(jwtTokenString)
                 .user(user)
-                .createdAt(LocalDateTime.now())
                 .expirationTime(LocalDateTime.now().plus(Duration.ofMillis(jwtProperties.getRefreshExpirationMs())))
                 .build();
 
