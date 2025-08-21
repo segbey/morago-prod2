@@ -39,13 +39,4 @@ public class Notification {
     @Column(name = "text", length = 1000)
     private String text;
 
-    @Column(name = "date_time")
-    private LocalDateTime dateTime;//это время получения уведомления?
-
-    @Column(name = "error_time")
-    private LocalDateTime errorTime;//что это?(Лола)
-
-    @Column(name = "is_read", nullable = false)
-    @Builder.Default
-    private boolean read = false;
 }
