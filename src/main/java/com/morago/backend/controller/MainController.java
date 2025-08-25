@@ -3,8 +3,11 @@ package com.morago.backend.controller;
 import com.morago.backend.dto.tokens.JWTRequest;
 import com.morago.backend.dto.tokens.JWTResponse;
 import com.morago.backend.dto.tokens.RefreshTokenRequest;
+import com.morago.backend.dto.user.UserRegistrationRequestDto;
+import com.morago.backend.dto.user.UserResponseDto;
 import com.morago.backend.service.auth.AuthService;
 import com.morago.backend.service.token.RefreshTokenService;
+import com.morago.backend.service.user.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -12,9 +15,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.transaction.Transactional;
-import lombok.AllArgsConstructor;
-import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,33 +26,36 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Authentication", description = "User authentication and token management")
 @RestController
-@AllArgsConstructor
+@RequiredArgsConstructor
 @RequestMapping("/auth")
 public class MainController {
+
     private final AuthService authService;
     private final RefreshTokenService refreshTokenService;
+    private final UserService userService;
 
     @Operation(
-            summary = "Log in with username and password",
-            description = "Authenticates the user and returns a JWT access token and refresh token.",
+            summary = "Log in with phone and password",
+            description = "Authenticates the user and returns a JWT access token and refresh token. " +
+                    "Phone format: 01012345678",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true,
                     content = @Content(
                             schema = @Schema(implementation = JWTRequest.class),
                             examples = @ExampleObject(
                                     name = "Example",
-                                    value = "{\"username\":\"admin@example.com\",\"password\":\"P@ssw0rd\"}"
+                                    value = "{\"username\":\"01012345678\",\"password\":\"P@ssw0rd!\"}"
                             )
                     )
             ),
             responses = {
                     @ApiResponse(responseCode = "200", description = "Successful authentication",
                             content = @Content(schema = @Schema(implementation = JWTResponse.class))),
-                    @ApiResponse(responseCode = "401", description = "Invalid username or password")
+                    @ApiResponse(responseCode = "401", description = "Invalid credentials")
             }
     )
     @PostMapping("/login")
-    public ResponseEntity<JWTResponse> login(@RequestBody JWTRequest authRequest) {
+    public ResponseEntity<JWTResponse> login(@Valid @RequestBody JWTRequest authRequest) {
         JWTResponse response = authService.createAuthToken(authRequest);
         return ResponseEntity.ok(response);
     }
@@ -75,18 +80,44 @@ public class MainController {
             }
     )
     @PostMapping("/refresh_token")
-    public ResponseEntity<JWTResponse> refreshToken(@RequestBody RefreshTokenRequest request) {
-        try {
-            JWTResponse jwtResponse = refreshTokenService.refreshToken(request.getRefreshToken());
-            return ResponseEntity.ok(jwtResponse);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new JWTResponse("", ""));
-        }
+    public ResponseEntity<JWTResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        JWTResponse jwtResponse = refreshTokenService.refreshToken(request.getRefreshToken());
+        return ResponseEntity.ok(jwtResponse);
+    }
+
+    @Operation(
+            summary = "Register user",
+            description = "Registers a new user with role ROLE_USER. Phone format strictly 01012345678.",
+            responses = {
+                    @ApiResponse(responseCode = "201", description = "User created",
+                            content = @Content(schema = @Schema(implementation = UserResponseDto.class))),
+                    @ApiResponse(responseCode = "400", description = "Validation error"),
+                    @ApiResponse(responseCode = "409", description = "Phone already registered")
+            }
+    )
+    @PostMapping("/register")
+    public ResponseEntity<UserResponseDto> registerUser(@Valid @RequestBody UserRegistrationRequestDto dto) {
+        return ResponseEntity.status(201).body(userService.registerUser(dto));
+    }
+
+    @Operation(
+            summary = "Register translator",
+            description = "Registers a new translator with role ROLE_TRANSLATOR. Phone format 01012345678.",
+            responses = {
+                    @ApiResponse(responseCode = "201", description = "Translator created",
+                            content = @Content(schema = @Schema(implementation = UserResponseDto.class))),
+                    @ApiResponse(responseCode = "400", description = "Validation error"),
+                    @ApiResponse(responseCode = "409", description = "Phone already registered")
+            }
+    )
+    @PostMapping("/register/translator")
+    public ResponseEntity<UserResponseDto> registerTranslator(@Valid @RequestBody UserRegistrationRequestDto dto) {
+        return ResponseEntity.status(201).body(userService.registerTranslator(dto));
     }
 
     @Operation(
             summary = "Log out",
-            description = "Invalidates the provided refresh token. Requires a valid Bearer token in the Authorization header.",
+            description = "Invalidates the provided refresh token. Requires a valid Bearer token.",
             security = @SecurityRequirement(name = "bearerAuth"),
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true,
@@ -100,19 +131,13 @@ public class MainController {
             ),
             responses = {
                     @ApiResponse(responseCode = "200", description = "Successfully logged out"),
-                    @ApiResponse(responseCode = "400", description = "Bad request"),
                     @ApiResponse(responseCode = "401", description = "Unauthorized")
             }
     )
     @PostMapping("/logout")
     @PreAuthorize("isAuthenticated()")
-    @Transactional
-    public ResponseEntity<String> logout(@RequestBody RefreshTokenRequest request) {
-        try {
-            refreshTokenService.logoutUserByRefreshToken(request.getRefreshToken());
-            return ResponseEntity.ok("Logged out successfully");
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        }
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        refreshTokenService.logoutUserByRefreshToken(request.getRefreshToken());
+        return ResponseEntity.ok().build();
     }
 }
