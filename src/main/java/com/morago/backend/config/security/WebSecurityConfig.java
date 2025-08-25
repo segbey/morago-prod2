@@ -44,7 +44,9 @@ public class WebSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/admin/**").hasRole("ROLE_ADMIN")
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/translators/**").hasAnyRole("TRANSLATOR", "ADMIN", "USER")
+
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers(WS_WHITELIST).permitAll()
                         .requestMatchers("/ws-health/**","/ws-native/**","/send-test","api/test/**").permitAll()

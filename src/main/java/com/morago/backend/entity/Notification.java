@@ -39,4 +39,7 @@ public class Notification {
     @Column(name = "text", length = 1000)
     private String text;
 
+    @Column(name = "date_time")
+    private LocalDateTime dateTime;
+
 }

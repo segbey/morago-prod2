@@ -35,8 +35,6 @@ public class NotificationServiceImpl implements NotificationService {
         existing.setTitle(dto.getTitle());
         existing.setText(dto.getText());
         existing.setDateTime(dto.getDateTime());
-        existing.setErrorTime(dto.getErrorTime());
-        existing.setRead(dto.isRead());
         return notificationMapper.toDto(notificationRepository.save(existing));
     }
 

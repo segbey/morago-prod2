@@ -12,9 +12,12 @@ import com.morago.backend.repository.ThemeRepository;
 import com.morago.backend.repository.TranslatorProfileRepository;
 import com.morago.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -34,27 +37,31 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
         User user = userRepo.findById(dto.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        Set<Language> languages = (dto.getLanguageIds() != null)
-                ? dto.getLanguageIds().stream()
-                .map(id -> languageRepo.findById(id)
-                        .orElseThrow(() -> new ResourceNotFoundException("Language not found: " + id)))
-                .collect(Collectors.toSet())
-                : Set.of();
+        if (profileRepo.existsByUser_Id(user.getId())) {
+            throw new IllegalStateException("User already has a TranslatorProfile");
+        }
 
-        Set<Theme> themes = (dto.getThemeIds() != null)
-                ? dto.getThemeIds().stream()
-                .map(id -> themeRepo.findById(id)
-                        .orElseThrow(() -> new ResourceNotFoundException("Theme not found: " + id)))
-                .collect(Collectors.toSet())
-                : Set.of();
+        Set<Language> languages = (dto.getLanguageIds() != null) ?
+                dto.getLanguageIds().stream()
+                        .map(id -> languageRepo.findById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException("Language not found: " + id)))
+                        .collect(Collectors.toSet()) :
+                Set.of();
+
+        Set<Theme> themes = (dto.getThemeIds() != null) ?
+                dto.getThemeIds().stream()
+                        .map(id -> themeRepo.findById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException("Theme not found: " + id)))
+                        .collect(Collectors.toSet()) :
+                Set.of();
 
         TranslatorProfile profile = TranslatorProfile.builder()
-                .dateOfBirth(dto.getDateOfBirth())
+                .user(user)
                 .email(dto.getEmail())
+                .dateOfBirth(dto.getDateOfBirth())
                 .isAvailable(dto.getIsAvailable())
                 .isOnline(dto.getIsOnline())
                 .levelOfKorean(dto.getLevelOfKorean())
-                .user(user)
                 .languages(languages)
                 .themes(themes)
                 .build();
@@ -63,6 +70,7 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public TranslatorProfileDto getById(Long id) {
         return profileRepo.findById(id)
                 .map(mapper::toDto)
@@ -74,24 +82,24 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
         TranslatorProfile profile = profileRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
-        if (dto.getDateOfBirth() != null) profile.setDateOfBirth(dto.getDateOfBirth());
-        if (dto.getEmail() != null) profile.setEmail(dto.getEmail());
-        if (dto.getIsAvailable() != null) profile.setIsAvailable(dto.getIsAvailable());
-        if (dto.getIsOnline() != null) profile.setIsOnline(dto.getIsOnline());
-        if (dto.getLevelOfKorean() != null) profile.setLevelOfKorean(dto.getLevelOfKorean());
+        profile.setEmail(dto.getEmail());
+        profile.setDateOfBirth(dto.getDateOfBirth());
+        profile.setIsAvailable(dto.getIsAvailable());
+        profile.setIsOnline(dto.getIsOnline());
+        profile.setLevelOfKorean(dto.getLevelOfKorean());
 
         if (dto.getLanguageIds() != null) {
             Set<Language> languages = dto.getLanguageIds().stream()
-                    .map(idL -> languageRepo.findById(idL)
-                            .orElseThrow(() -> new ResourceNotFoundException("Language not found: " + idL)))
+                    .map(lid -> languageRepo.findById(lid)
+                            .orElseThrow(() -> new ResourceNotFoundException("Language not found: " + lid)))
                     .collect(Collectors.toSet());
             profile.setLanguages(languages);
         }
 
         if (dto.getThemeIds() != null) {
             Set<Theme> themes = dto.getThemeIds().stream()
-                    .map(idT -> themeRepo.findById(idT)
-                            .orElseThrow(() -> new ResourceNotFoundException("Theme not found: " + idT)))
+                    .map(tid -> themeRepo.findById(tid)
+                            .orElseThrow(() -> new ResourceNotFoundException("Theme not found: " + tid)))
                     .collect(Collectors.toSet());
             profile.setThemes(themes);
         }
@@ -105,5 +113,18 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
         profileRepo.delete(profile);
     }
-}
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<TranslatorProfileDto> getAll() {
+        return profileRepo.findAll().stream()
+                .map(mapper::toDto)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<TranslatorProfileDto> getAll(Pageable pageable) {
+        return profileRepo.findAll(pageable).map(mapper::toDto);
+    }
+}
