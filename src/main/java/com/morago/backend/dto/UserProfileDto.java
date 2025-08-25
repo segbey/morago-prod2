@@ -1,8 +1,11 @@
 package com.morago.backend.dto;
 
-import lombok.*;
-
-import java.time.LocalDateTime;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Setter
@@ -10,10 +13,10 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class UserProfileDto {
-    private Long id;
-    private Long userId;
-    private boolean isFreeCallMade;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    @Size(max = 200)
+    private String firstName;
+
+    @Size(max = 200)
+    private String lastName;
 }
 

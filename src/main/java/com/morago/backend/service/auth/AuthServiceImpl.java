@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -27,11 +27,12 @@ public class AuthServiceImpl implements AuthService {
                 )
         );
 
-        User user = (User) authentication.getPrincipal();
-        String accessToken = jwtUtils.generateAccessToken(user);
-        String refreshToken = jwtUtils.generateRefreshToken(user);
+        UserDetails principal = (UserDetails) authentication.getPrincipal();
 
-        refreshTokenService.createRefreshToken(user.getUsername(), refreshToken);
+        String accessToken  = jwtUtils.generateAccessToken(principal);
+        String refreshToken = jwtUtils.generateRefreshToken(principal);
+
+        refreshTokenService.createRefreshToken(principal.getUsername(), refreshToken);
 
         return new JWTResponse(accessToken, refreshToken);
     }
