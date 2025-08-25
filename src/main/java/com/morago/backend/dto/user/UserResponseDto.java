@@ -11,13 +11,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserResponseDto {
-
-    private Long id;
-    private String username;
+    private String phoneNumber;
     private String firstName;
     private String lastName;
-    private BigDecimal balance;
-    private boolean isActive;
-    private Byte onBoardingStatus;
-    private Set<String> roles;
 }

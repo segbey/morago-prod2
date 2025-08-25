@@ -7,9 +7,12 @@ import org.mapstruct.*;
 @Mapper(componentModel = "spring")
 public interface UserProfileMapper {
 
-    @Mapping(source = "user.id", target = "userId")
     UserProfileDto toDto(UserProfile userProfile);
 
-    @Mapping(source = "userId", target = "user.id")
-    UserProfile toEntity(UserProfileDto userProfileDto);
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "user", ignore = true)
+    UserProfile toEntity(UserProfileDto dto);
+
+    @BeanMapping(ignoreByDefault = true)
+    void updateEntityFromDto(UserProfileDto dto, @MappingTarget UserProfile entity);
 }
