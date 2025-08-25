@@ -2,7 +2,7 @@ package com.morago.backend.controller;
 
 import com.morago.backend.dto.UserProfileDto;
 import com.morago.backend.dto.user.UserResponseDto;
-import com.morago.backend.service.UserService;
+import com.morago.backend.service.user.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
