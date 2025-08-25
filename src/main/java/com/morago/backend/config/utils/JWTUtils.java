@@ -14,31 +14,42 @@ import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
 public class JWTUtils {
+    private static final long CLOCK_SKEW_SEC = 60;
+
     private final JWTProperties jwtProperties;
-    public JWTUtils(JWTProperties jwtProperties) {
-        this.jwtProperties = jwtProperties;
-    }
+    public JWTUtils(JWTProperties jwtProperties) { this.jwtProperties = jwtProperties; }
 
     private Key getAccessSigningKey() {
-        return Keys.hmacShaKeyFor(jwtProperties.getAccessSecret().getBytes());
+        byte[] key = io.jsonwebtoken.io.Decoders.BASE64.decode(jwtProperties.getAccessSecret());
+        return Keys.hmacShaKeyFor(key);
     }
-
     private Key getRefreshSigningKey() {
-        return Keys.hmacShaKeyFor(jwtProperties.getRefreshSecret().getBytes());
+        byte[] key = io.jsonwebtoken.io.Decoders.BASE64.decode(jwtProperties.getRefreshSecret());
+        return Keys.hmacShaKeyFor(key);
+    }
+    private Key getSigningKey(TokenType type) {
+        return (type == TokenType.ACCESS) ? getAccessSigningKey() : getRefreshSigningKey();
     }
 
-    private Key getSigningKey(TokenType type) {
-        return switch (type) {
-            case ACCESS -> getAccessSigningKey();
-            case REFRESH -> getRefreshSigningKey();
-        };
+    @jakarta.annotation.PostConstruct
+    void validateConfig() {
+        requireNonEmpty(jwtProperties.getAccessSecret(), "accessSecret");
+        requireNonEmpty(jwtProperties.getRefreshSecret(), "refreshSecret");
+
+        getAccessSigningKey();
+        getRefreshSigningKey();
+        if (jwtProperties.getAccessExpirationMs() <= 0 || jwtProperties.getRefreshExpirationMs() <= 0) {
+            throw new IllegalStateException("JWT expiration must be > 0");
+        }
+    }
+    private static void requireNonEmpty(String v, String name) {
+        if (v == null || v.isBlank()) throw new IllegalStateException("Missing JWT property: " + name);
     }
 
     public String generateAccessToken(UserDetails userDetails) {
@@ -46,65 +57,68 @@ public class JWTUtils {
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toSet());
 
+        Date now = new Date();
+        Date exp = new Date(now.getTime() + jwtProperties.getAccessExpirationMs());
+
         return Jwts.builder()
+                .setIssuer("morago")
+                .setId(java.util.UUID.randomUUID().toString())
                 .setSubject(userDetails.getUsername())
                 .claim("roles", roles)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getAccessExpirationMs()))
+                .setIssuedAt(now)
+                .setExpiration(exp)
                 .signWith(getAccessSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
     public String generateRefreshToken(UserDetails userDetails) {
+        Date now = new Date();
+        Date exp = new Date(now.getTime() + jwtProperties.getRefreshExpirationMs());
+
         return Jwts.builder()
+                .setIssuer("morago")
+                .setId(java.util.UUID.randomUUID().toString())
                 .setSubject(userDetails.getUsername())
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getRefreshExpirationMs()))
+                .setIssuedAt(now)
+                .setExpiration(exp)
                 .signWith(getRefreshSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
     public String getUsernameFromToken(String token, TokenType type) {
-        try {
-            return Jwts.parserBuilder()
-                    .setSigningKey(getSigningKey(type))
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody()
-                    .getSubject();
-        } catch (ExpiredJwtException e) {
-            throw new ExpireJwtTokenException();
-        } catch (JwtException | IllegalArgumentException e) {
-            throw new InvalidJwtTokenException();
-        }
+        return parse(token, type).getSubject();
     }
 
-    @SuppressWarnings("unchecked")
     public Set<String> getRolesFromToken(String token, TokenType type) {
-        try {
-            return new HashSet<>((List<String>) Jwts.parserBuilder()
-                    .setSigningKey(getSigningKey(type))
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody()
-                    .get("roles"));
-        } catch (ExpiredJwtException e) {
-            throw new ExpireJwtTokenException();
-        } catch (JwtException | IllegalArgumentException e) {
-            throw new InvalidJwtTokenException();
+        Object raw = parse(token, type).get("roles");
+        if (raw instanceof List<?> list) {
+            return list.stream().filter(String.class::isInstance).map(String.class::cast).collect(Collectors.toSet());
         }
+        return Set.of();
     }
 
     public void validateToken(String token, TokenType type) {
+        parse(token, type);
+    }
+
+    private io.jsonwebtoken.Claims parse(String token, TokenType type) {
         try {
-            Jwts.parserBuilder()
+            return Jwts.parserBuilder()
                     .setSigningKey(getSigningKey(type))
+                    .setAllowedClockSkewSeconds(CLOCK_SKEW_SEC)
                     .build()
-                    .parseClaimsJws(token);
+                    .parseClaimsJws(token)
+                    .getBody();
         } catch (ExpiredJwtException e) {
             throw new ExpireJwtTokenException();
         } catch (JwtException | IllegalArgumentException e) {
             throw new InvalidJwtTokenException();
         }
+    }
+
+    public static String stripBearer(String token) {
+        if (token == null) return null;
+        token = token.trim();
+        return token.regionMatches(true, 0, "Bearer ", 0, 7) ? token.substring(7).trim() : token;
     }
 }
