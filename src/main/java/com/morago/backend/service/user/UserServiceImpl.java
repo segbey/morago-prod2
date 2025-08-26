@@ -15,6 +15,7 @@ import com.morago.backend.exception.UserNotFoundException;
 import com.morago.backend.mapper.UserMapper;
 import com.morago.backend.repository.RefreshTokenRepository;
 import com.morago.backend.repository.UserRepository;
+import com.morago.backend.service.RoleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;

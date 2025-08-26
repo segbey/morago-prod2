@@ -41,13 +41,14 @@ public class WebSecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/user/**").hasRole("USER")
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers(WS_WHITELIST).permitAll()
-                        .requestMatchers("/ws-health/**","/ws-native/**","/send-test","api/test/**").permitAll()
+                        .requestMatchers("/ws-health/**", "/ws-native/**", "/send-test", "/api/test/**").permitAll()
+                        .requestMatchers("/user/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/translator/**").hasAnyRole("TRANSLATOR", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
