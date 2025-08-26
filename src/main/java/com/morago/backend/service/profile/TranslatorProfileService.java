@@ -1,6 +1,11 @@
 package com.morago.backend.service.profile;
 
 import com.morago.backend.dto.TranslatorProfileDto;
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+
+import org.springframework.data.domain.Pageable;
+import java.util.List;
 
 public interface TranslatorProfileService {
 
@@ -11,4 +16,9 @@ public interface TranslatorProfileService {
     TranslatorProfileDto update(Long id, TranslatorProfileDto dto);
 
     void delete(Long id);
+    List<TranslatorProfileDto> getAll();
+    Page<TranslatorProfileDto> getAll(Pageable pageable);
+
+
+
 }
