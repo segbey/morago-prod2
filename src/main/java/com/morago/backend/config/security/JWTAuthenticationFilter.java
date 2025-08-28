@@ -2,8 +2,8 @@ package com.morago.backend.config.security;
 
 import com.morago.backend.config.utils.JWTUtils;
 import com.morago.backend.entity.enumFiles.TokenType;
-import com.morago.backend.exception.ExpireJwtTokenException;
-import com.morago.backend.exception.InvalidJwtTokenException;
+import com.morago.backend.exception.token.ExpireJwtTokenException;
+import com.morago.backend.exception.token.InvalidJwtTokenException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

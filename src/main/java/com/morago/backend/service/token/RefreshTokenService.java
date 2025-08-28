@@ -3,8 +3,8 @@ package com.morago.backend.service.token;
 import com.morago.backend.dto.tokens.JWTResponse;
 import com.morago.backend.entity.RefreshToken;
 import com.morago.backend.entity.User;
-import com.morago.backend.exception.ExpireJwtTokenException;
-import com.morago.backend.exception.RefreshTokenNotFoundException;
+import com.morago.backend.exception.token.ExpireJwtTokenException;
+import com.morago.backend.exception.token.RefreshTokenNotFoundException;
 import java.util.Optional;
 
 public interface RefreshTokenService {

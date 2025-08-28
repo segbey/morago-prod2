@@ -1,8 +1,8 @@
 package com.morago.backend.config.utils;
 
 import com.morago.backend.entity.enumFiles.TokenType;
-import com.morago.backend.exception.ExpireJwtTokenException;
-import com.morago.backend.exception.InvalidJwtTokenException;
+import com.morago.backend.exception.token.ExpireJwtTokenException;
+import com.morago.backend.exception.token.InvalidJwtTokenException;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;

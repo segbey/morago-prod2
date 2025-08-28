@@ -14,11 +14,11 @@ public interface TranslatorProfileRepository extends JpaRepository<TranslatorPro
     boolean existsByUser_Id(Long userId);
 
 
-    List<TranslatorProfile> findByIsAvailableTrue();
+    List<TranslatorProfile> findByIsVerifiedTrue();
 
     List<TranslatorProfile> findByIsOnlineTrue();
 
-    List<TranslatorProfile> findByIsAvailableTrueAndIsOnlineTrue();
+    List<TranslatorProfile> findByIsVerifiedTrueAndIsOnlineTrue();
 
     List<TranslatorProfile> findByEmailContainingIgnoreCase(String email);
 

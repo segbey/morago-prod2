@@ -1,4 +1,4 @@
-package com.morago.backend.exception;
+package com.morago.backend.exception.token;
 
 public class ExpireJwtTokenException extends RuntimeException {
     public ExpireJwtTokenException() {
