@@ -1,4 +1,4 @@
-package com.morago.backend.entity;
+package com.morago.backend.listener;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;

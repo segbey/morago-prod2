@@ -1,6 +1,7 @@
 package com.morago.backend.entity;
 
 import com.morago.backend.entity.enumFiles.Roles;
+import com.morago.backend.listener.Auditable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -22,7 +23,7 @@ import lombok.Setter;
         uniqueConstraints = @UniqueConstraint(name = "uk_roles_role_name", columnNames = "role_name")
 )
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class Role extends Auditable{
+public class Role extends Auditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

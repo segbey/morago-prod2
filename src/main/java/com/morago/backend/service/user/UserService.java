@@ -1,25 +1,25 @@
 package com.morago.backend.service.user;
 
-
-import com.morago.backend.dto.UserProfileDto;
+import com.morago.backend.dto.password.ChangePasswordRequestDto;
 import com.morago.backend.dto.user.UserRegistrationRequestDto;
-import com.morago.backend.dto.user.UserResponseDto;
+import com.morago.backend.dto.user.UserRegistrationResponseDto;
+import com.morago.backend.dto.user.UserUpdateProfileRequestDto;
+import com.morago.backend.dto.user.UserUpdateProfileResponseDto;
 import com.morago.backend.entity.User;
-
-import java.util.List;
-import java.util.Optional;
 
 public interface UserService {
     User findByUsernameOrThrow(String username);
     User findByIdOrThrow(Long id);
     User getCurrentUser();
 
-    UserResponseDto registerUser(UserRegistrationRequestDto dto);
-    UserResponseDto registerTranslator(UserRegistrationRequestDto dto);
-    UserResponseDto updateProfile(Long userId, UserProfileDto dto);
+    UserRegistrationResponseDto registerUser(UserRegistrationRequestDto dto);
+    UserRegistrationResponseDto registerTranslator(UserRegistrationRequestDto dto);
+    UserUpdateProfileResponseDto updateProfile(Long userId, UserUpdateProfileRequestDto dto);
+
+    void changePassword(Long userId, ChangePasswordRequestDto dto);
 
 
-    UserResponseDto createUser(UserRegistrationRequestDto dto);
+    UserRegistrationResponseDto createUser(UserRegistrationRequestDto dto);
     void deleteUser(Long id);
 
 

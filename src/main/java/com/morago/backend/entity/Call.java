@@ -1,6 +1,7 @@
 package com.morago.backend.entity;
 
 import com.morago.backend.entity.enumFiles.CallStatus;
+import com.morago.backend.listener.Auditable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -28,7 +29,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Call extends Auditable{
+public class Call extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

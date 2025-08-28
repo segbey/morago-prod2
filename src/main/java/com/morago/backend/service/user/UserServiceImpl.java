@@ -1,17 +1,21 @@
 package com.morago.backend.service.user;
 
-import com.morago.backend.dto.UserProfileDto;
+import com.morago.backend.dto.password.ChangePasswordRequestDto;
 import com.morago.backend.dto.user.UserRegistrationRequestDto;
-import com.morago.backend.dto.user.UserResponseDto;
+import com.morago.backend.dto.user.UserRegistrationResponseDto;
+import com.morago.backend.dto.user.UserUpdateProfileRequestDto;
+import com.morago.backend.dto.user.UserUpdateProfileResponseDto;
 import com.morago.backend.entity.TranslatorProfile;
 import com.morago.backend.entity.User;
 import com.morago.backend.entity.UserProfile;
 import com.morago.backend.entity.enumFiles.Roles;
-import com.morago.backend.exception.PasswordMismatchException;
-import com.morago.backend.exception.PasswordRequiredException;
-import com.morago.backend.exception.PhoneAlreadyExistsException;
-import com.morago.backend.exception.PhoneInvalidException;
+import com.morago.backend.exception.password.PasswordMismatchException;
+import com.morago.backend.exception.password.PasswordRequiredException;
+import com.morago.backend.exception.phonenumber.PhoneAlreadyExistsException;
+import com.morago.backend.exception.phonenumber.PhoneInvalidException;
 import com.morago.backend.exception.UserNotFoundException;
+import com.morago.backend.exception.password.WeakPasswordException;
+import com.morago.backend.exception.password.WrongOldPasswordException;
 import com.morago.backend.mapper.UserMapper;
 import com.morago.backend.repository.RefreshTokenRepository;
 import com.morago.backend.repository.UserRepository;
@@ -65,18 +69,18 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserResponseDto registerUser(UserRegistrationRequestDto dto) {
+    public UserRegistrationResponseDto registerUser(UserRegistrationRequestDto dto) {
         return register(dto, Roles.ROLE_USER);
     }
 
     @Override
     @Transactional
-    public UserResponseDto registerTranslator(UserRegistrationRequestDto dto) {
+    public UserRegistrationResponseDto registerTranslator(UserRegistrationRequestDto dto) {
         return register(dto, Roles.ROLE_TRANSLATOR);
     }
 
     @Transactional
-    private UserResponseDto register(UserRegistrationRequestDto dto, Roles fixedRole) {
+    private UserRegistrationResponseDto register(UserRegistrationRequestDto dto, Roles fixedRole) {
         String phone = validateRegistration(dto);
 
         User user = userMapper.toEntity(dto);
@@ -125,27 +129,84 @@ public class UserServiceImpl implements UserService {
     //for users
     @Override
     @Transactional
-    public UserResponseDto updateProfile(Long userId, UserProfileDto dto) {
+    public UserUpdateProfileResponseDto updateProfile(Long userId, UserUpdateProfileRequestDto dto) {
         User user = findByIdOrThrow(userId);
+
+        boolean changed = false;
 
         if (dto.getFirstName() != null) {
             String v = dto.getFirstName().trim();
-            user.setFirstName(v.isEmpty() ? null : v);
+            String newVal = v.isEmpty() ? null : v;
+            if (!java.util.Objects.equals(user.getFirstName(), newVal)) {
+                user.setFirstName(newVal);
+                changed = true;
+            }
         }
         if (dto.getLastName() != null) {
             String v = dto.getLastName().trim();
-            user.setLastName(v.isEmpty() ? null : v);
+            String newVal = v.isEmpty() ? null : v;
+            if (!java.util.Objects.equals(user.getLastName(), newVal)) {
+                user.setLastName(newVal);
+                changed = true;
+            }
         }
 
-        return userMapper.toResponseDto(userRepository.save(user));
+        if (changed) {
+            user = userRepository.save(user);
+        }
+        return userMapper.toUpdateProfileResponseDto(user);
     }
 
+
+    @Override
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequestDto dto) {
+        User user = findByIdOrThrow(userId);
+
+        boolean isAdmin = currentUserIsAdmin();
+
+        if (!isAdmin) {
+            if (dto.getCurrentPassword() == null || dto.getCurrentPassword().isBlank()) {
+                throw new WrongOldPasswordException();
+            }
+            if (!passwordEncoder.matches(dto.getCurrentPassword(), user.getPassword())) {
+                throw new WrongOldPasswordException();
+            }
+        }
+
+        if (!java.util.Objects.equals(dto.getNewPassword(), dto.getConfirmPassword())) {
+            throw new PasswordMismatchException();
+        }
+
+        validatePasswordStrength(dto.getNewPassword());
+
+        user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        userRepository.save(user);
+
+        refreshTokenRepository.deleteByUser(user);
+    }
+
+    private boolean currentUserIsAdmin() {
+        Authentication a = SecurityContextHolder.getContext().getAuthentication();
+        if (a == null) return false;
+        return a.getAuthorities().stream().anyMatch(ga -> "ROLE_ADMIN".equals(ga.getAuthority()));
+    }
+
+    private void validatePasswordStrength(String pwd) {
+        if (pwd == null || pwd.length() < 8) {
+            throw new WeakPasswordException("Password must be at least 8 characters");
+        }
+        // Example: min 1 letter и 1 digit
+         if (!pwd.matches("^(?=.*[A-Za-z])(?=.*\\d).{8,}$")) {
+             throw new WeakPasswordException("Password must contain letters and digits");
+         }
+    }
 
     //CHANGE IT AS ADMIN'S PART
     @Override
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    public UserResponseDto createUser(UserRegistrationRequestDto dto) {
+    public UserRegistrationResponseDto createUser(UserRegistrationRequestDto dto) {
 //        if (userRepository.existsByUsername(dto.getUsername())) {
 //            throw new IllegalArgumentException("Username already exists");
 //        }

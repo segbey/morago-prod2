@@ -1,5 +1,6 @@
 package com.morago.backend.entity;
 
+import com.morago.backend.listener.Auditable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -28,7 +29,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class TranslatorProfile extends Auditable{
+public class TranslatorProfile extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,8 +43,9 @@ public class TranslatorProfile extends Auditable{
     @jakarta.validation.constraints.Email
     private String email;
 
-    @Column(name = "is_available")
-    private Boolean isAvailable;
+    @Column(name = "is_verified", nullable = false)
+    @Builder.Default
+    private Boolean isVerified = false;
 
     @Column(name = "is_online")
     private Boolean isOnline;

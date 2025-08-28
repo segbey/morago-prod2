@@ -11,7 +11,7 @@ public class TranslatorProfileDto {
     private LocalDateTime createdAt;
     private LocalDate dateOfBirth;
     private String email;
-    private Boolean isAvailable;
+    private Boolean isVerified;
     private Boolean isOnline;
     private String levelOfKorean;
     private LocalDateTime updatedAt;
