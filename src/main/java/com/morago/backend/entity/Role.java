@@ -16,6 +16,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.NaturalId;
 
 @Entity
 @Table(
@@ -29,7 +30,7 @@ public class Role extends Auditable {
     private Long id;
 
     @Enumerated(EnumType.STRING)
-    @org.hibernate.annotations.NaturalId
+    @NaturalId
     @Column(name = "role_name", nullable = false, unique = true, length = 64)
     private Roles name;
 }

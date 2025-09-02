@@ -17,6 +17,7 @@ public interface UserMapper {
     @Mapping(target = "translatorProfile", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "balance", ignore = true)
     User toEntity(UserRegistrationRequestDto dto);
 
     @Mapping(target = "phoneNumber", source = "username")

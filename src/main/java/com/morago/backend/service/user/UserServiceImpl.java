@@ -88,6 +88,10 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setActive(true);
 
+        if (user.getBalance() == null) {
+            user.setBalance(java.math.BigDecimal.ZERO);
+        }
+
         user.setRoles(new java.util.HashSet<>(
                 java.util.List.of(roleService.getRoleOrThrow(fixedRole))
         ));

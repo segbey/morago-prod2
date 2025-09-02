@@ -1,5 +1,7 @@
 package com.morago.backend.config.security;
 
+import com.morago.backend.config.security.handler.RestAccessDeniedHandler;
+import com.morago.backend.config.security.handler.RestAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,6 +34,9 @@ public class WebSecurityConfig {
     private final JWTAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailService customUserDetailService;
 
+    private final RestAuthenticationEntryPoint restAuthenticationEntryPoint; // 401
+    private final RestAccessDeniedHandler restAccessDeniedHandler;           // 403
+
     private static final String[] SWAGGER_WHITELIST = {
             "/v3/api-docs/**",
             "/swagger-ui.html",
@@ -49,8 +54,11 @@ public class WebSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(e -> e
+                        .authenticationEntryPoint(restAuthenticationEntryPoint) // 401
+                        .accessDeniedHandler(restAccessDeniedHandler)           // 403
+                )
                 .authorizeHttpRequests(auth -> auth
-                        
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers(WS_WHITELIST).permitAll()

@@ -22,5 +22,5 @@ public class CallDto {
     private LocalDateTime updatedAt;
     private String channelName;
     private CallStatus callStatus;
-//    private boolean isEndCall;
+    private boolean endCall;
 }
