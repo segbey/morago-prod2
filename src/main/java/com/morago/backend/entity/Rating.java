@@ -1,6 +1,7 @@
 package com.morago.backend.entity;
 
 
+import com.morago.backend.listener.Auditable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -33,7 +34,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Rating extends Auditable{
+public class Rating extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

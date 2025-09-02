@@ -1,5 +1,6 @@
 package com.morago.backend.entity;
 
+import com.morago.backend.listener.Auditable;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -59,8 +59,7 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
                 .user(user)
                 .email(dto.getEmail())
                 .dateOfBirth(dto.getDateOfBirth())
-                .isAvailable(dto.getIsAvailable())
-                .isOnline(dto.getIsOnline())
+                .isVerified(Boolean.TRUE.equals(dto.getIsVerified()))
                 .levelOfKorean(dto.getLevelOfKorean())
                 .languages(languages)
                 .themes(themes)
@@ -84,9 +83,12 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
 
         profile.setEmail(dto.getEmail());
         profile.setDateOfBirth(dto.getDateOfBirth());
-        profile.setIsAvailable(dto.getIsAvailable());
         profile.setIsOnline(dto.getIsOnline());
         profile.setLevelOfKorean(dto.getLevelOfKorean());
+
+        if (dto.getIsVerified() != null) {
+            profile.setIsVerified(dto.getIsVerified());
+        }
 
         if (dto.getLanguageIds() != null) {
             Set<Language> languages = dto.getLanguageIds().stream()

@@ -1,5 +1,6 @@
 package com.morago.backend.entity;
 
+import com.morago.backend.listener.Auditable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -27,7 +28,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Theme extends Auditable{
+public class Theme extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

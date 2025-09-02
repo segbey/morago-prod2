@@ -38,7 +38,7 @@ public class WebSecurityConfig {
             "/swagger-ui/**",
             "/swagger/**"
     };
-    
+
     private static final String[] WS_WHITELIST = {
             "/ws/**"
     };
@@ -48,16 +48,16 @@ public class WebSecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/translators/**").hasRole("TRANSLATOR")
-
-                        .requestMatchers("/user/**").hasRole("USER")
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers(WS_WHITELIST).permitAll()
-                        .requestMatchers("/ws-health/**","/ws-native/**","/send-test","api/test/**").permitAll()
+                        .requestMatchers("/ws-health/**", "/ws-native/**", "/send-test", "/api/test/**").permitAll()
+                        
+                        .requestMatchers("/user/**", "/api/users/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/translator/**", "/translators/**").hasAnyRole("TRANSLATOR", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
@@ -84,11 +84,16 @@ public class WebSecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    @Bean public CorsConfigurationSource corsSource() {
+    @Bean
+    public CorsConfigurationSource corsSource() {
         CorsConfiguration c = new CorsConfiguration();
-        c.setAllowedOrigins(List.of("http://localhost:3000,http://127.0.0.1:3000"));
-        c.setAllowedMethods(List.of("GET","POST","PUT","DELETE"));
-        c.setAllowedHeaders(List.of("*")); c.setAllowCredentials(true);
-        var src = new UrlBasedCorsConfigurationSource(); src.registerCorsConfiguration("/**", c); return src;
+        
+        c.setAllowedOrigins(List.of("http://localhost:3000", "http://127.0.0.1:3000"));
+        c.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        c.setAllowedHeaders(List.of("*"));
+        c.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
+        src.registerCorsConfiguration("/**", c);
+        return src;
     }
 }
