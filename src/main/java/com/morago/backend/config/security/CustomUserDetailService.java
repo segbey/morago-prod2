@@ -30,26 +30,3 @@ public class CustomUserDetailService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }
 }
-
-
-
-//public class CustomUserDetailService implements UserDetailsService {
-//    private final UserService userService;
-//
-//    @Override
-//    @Transactional(readOnly = true)
-//    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-//        try {
-//            User u = userService.findByUsernameOrThrow(username);
-//            return new org.springframework.security.core.userdetails.User(
-//                    u.getUsername(),
-//                    u.getPassword(),
-//                    u.getRoles().stream()
-//                            .map(r -> new SimpleGrantedAuthority(r.getName().name()))
-//                            .collect(Collectors.toList())
-//            );
-//        } catch (UserNotFoundException ex) {
-//            throw new UsernameNotFoundException(ex.getMessage());
-//        }
-//    }
-//}

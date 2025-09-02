@@ -13,6 +13,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,6 +22,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Entity
 @Table(name = "calls")
@@ -52,17 +54,19 @@ public class Call extends Auditable {
     @PositiveOrZero
     private int duration = 0;
 
-    @Column(name = "status", nullable = false)   // либо 'successful'
+    @Column(name = "status", nullable = false)
     @Builder.Default
     private boolean status = false;
 
-    @PositiveOrZero
-    @Column(name = "sum_decimal", precision = 10, scale = 2)
-    private BigDecimal sumDecimal;
+    @DecimalMin("0.00")
+    @Column(name = "sum_decimal", nullable = false, precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal sumDecimal = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
-    @PositiveOrZero
-    @Column(name = "commission", precision = 10, scale = 2)
-    private BigDecimal commission;
+    @DecimalMin("0.00")
+    @Column(name = "commission", nullable = false, precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal commission = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
     @Column(name = "translator_has_joined", nullable = false)
     @Builder.Default
@@ -82,6 +86,9 @@ public class Call extends Auditable {
 
     @Column(name = "is_end_call")
     @Builder.Default
-    private boolean isEndCall = false;
+    private boolean endCall = false;
+
+    public boolean isEndCall() { return endCall; }      // опционально, если нужно именно такой геттер
+    public void setEndCall(boolean v) { this.endCall = v; }
 }
 
