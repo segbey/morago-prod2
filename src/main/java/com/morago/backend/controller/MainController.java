@@ -79,7 +79,7 @@ public class MainController {
                     @ApiResponse(responseCode = "401", description = "Invalid or expired refresh token")
             }
     )
-    @PostMapping("/refresh_token")
+    @PostMapping("/refresh")
     public ResponseEntity<JWTResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
         JWTResponse jwtResponse = refreshTokenService.refreshToken(request.getRefreshToken());
         return ResponseEntity.ok(jwtResponse);

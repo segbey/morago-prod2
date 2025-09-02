@@ -13,8 +13,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -52,8 +53,8 @@ public class Withdrawal extends Auditable {
     @Column(name = "name_of_bank", length = 200, nullable = false)
     private String nameOfBank;
 
-    @jakarta.validation.constraints.NotNull
-    @PositiveOrZero
+    @NotNull
+    @DecimalMin("0.00")
     @Column(name = "sum_decimal", precision = 10, scale = 2, nullable = false)
     private BigDecimal sumDecimal;
 

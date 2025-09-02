@@ -52,7 +52,6 @@ public class Rating extends Auditable {
     @Column(name = "score", nullable = false)
     private int score;
 
-    // опционально
     @Size(max = 1000)
     @Column(name = "comment", length = 1000)
     private String comment;

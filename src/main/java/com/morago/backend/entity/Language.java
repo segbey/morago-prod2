@@ -13,6 +13,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.NaturalId;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -30,7 +31,7 @@ public class Language extends Auditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @org.hibernate.annotations.NaturalId
+    @NaturalId
     @Column(name = "name", nullable = false, unique = true, length = 200)
     private String name;
 
