@@ -1,12 +1,12 @@
 package com.morago.backend.service.withdrawal;
 
-import com.morago.backend.dto.WithdrawalDto;
-import java.util.List;
+import com.morago.backend.entity.Withdrawal;
+
+import java.math.BigDecimal;
 
 public interface WithdrawalService {
-    WithdrawalDto createWithdrawal(WithdrawalDto dto);
-    WithdrawalDto getWithdrawalById(Long id);
-    List<WithdrawalDto> getAllWithdrawals();
-    WithdrawalDto updateWithdrawal(Long id, WithdrawalDto dto);
-    void deleteWithdrawal(Long id);
+    Long requestWithdrawal(Long userId, String accountNumber, String holder, String bank, BigDecimal wonAmount);
+    void decideWithdrawal(Long withdrawalId, boolean approve, String adminNote);
+
+    Withdrawal findByIdOrThrow(Long id);
 }

@@ -1,4 +1,4 @@
-package com.morago.backend.dto;
+package com.morago.backend.dto.call;
 
 import com.morago.backend.entity.enumFiles.CallStatus;
 import lombok.Data;

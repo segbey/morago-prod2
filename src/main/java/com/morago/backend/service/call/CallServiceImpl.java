@@ -1,6 +1,6 @@
 package com.morago.backend.service.call;
 
-import com.morago.backend.dto.CallDto;
+import com.morago.backend.dto.call.CallDto;
 import com.morago.backend.entity.Call;
 import com.morago.backend.mapper.CallMapper;
 import com.morago.backend.repository.CallRepository;

@@ -1,4 +1,4 @@
-package com.morago.backend.service;
+package com.morago.backend.service.transaction;
 
 import com.morago.backend.entity.Transaction;
 import com.morago.backend.entity.User;
@@ -22,4 +22,5 @@ public interface TransactionService {
              EStatus status);
 
     Page<Transaction> history(Long userId, Pageable pageable);
+    Transaction findByIdOrThrow(Long id);
 }

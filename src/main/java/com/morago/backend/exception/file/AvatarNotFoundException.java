@@ -1,7 +1,9 @@
 package com.morago.backend.exception.file;
 
-public class AvatarNotFoundException extends RuntimeException {
-  public AvatarNotFoundException(String message) {
-    super(message);
-  }
+import com.morago.backend.exception.ResourceNotFoundException;
+
+public class AvatarNotFoundException extends ResourceNotFoundException {
+    public AvatarNotFoundException(Long userId) {
+        super("Avatar not found for userId=" + userId);
+    }
 }

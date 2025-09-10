@@ -14,6 +14,7 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -57,6 +58,12 @@ public class User extends Auditable implements UserDetails {
 
     @Column(name = "balance", nullable = false, precision = 19, scale = 2)
     private BigDecimal balance = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+
+    @Column(name = "reserved", nullable = false, precision = 19, scale = 2)
+    private BigDecimal reserved = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+
+    @Version
+    private Long version;
 
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
@@ -119,6 +126,14 @@ public class User extends Auditable implements UserDetails {
     public void setBalance(BigDecimal b) {
         this.balance = b == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
                 : b.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal getAvailable() {
+        return balance.subtract(reserved).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public void setReserved(BigDecimal r) {
+        this.reserved = (r == null ? BigDecimal.ZERO : r).setScale(2, RoundingMode.HALF_UP);
     }
 
 }

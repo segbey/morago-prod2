@@ -1,4 +1,10 @@
 package com.morago.backend.dto.call;
 
-public class ChargeCallResponse {
-}
+import java.math.BigDecimal;
+
+public record ChargeCallResponse(
+        Long clientId,
+        BigDecimal clientBalanceAfter,
+        Long interpreterId,
+        BigDecimal interpreterBalanceAfter
+) {}

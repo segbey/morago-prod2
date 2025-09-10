@@ -133,6 +133,12 @@
 			<artifactId>flyway-mysql</artifactId>
 			<version>11.7.2</version>
 		</dependency>
+
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
+			<version>2.25.49</version>
+		</dependency>
 	</dependencies>
 
 	<build>

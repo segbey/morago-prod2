@@ -1,7 +1,7 @@
 package com.morago.backend.mapper;
 
 import com.morago.backend.config.GlobalMappingConfig;
-import com.morago.backend.dto.CallDto;
+import com.morago.backend.dto.call.CallDto;
 import com.morago.backend.entity.Call;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Context;
