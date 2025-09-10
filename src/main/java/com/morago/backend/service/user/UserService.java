@@ -11,18 +11,21 @@ public interface UserService {
     User findByUsernameOrThrow(String username);
     User findByIdOrThrow(Long id);
     User getCurrentUser();
+    Long getCurrentUserId();
 
     UserRegistrationResponseDto registerUser(UserRegistrationRequestDto dto);
     UserRegistrationResponseDto registerTranslator(UserRegistrationRequestDto dto);
+
+
+    //for admin
+    void changePassword(Long userId, ChangePasswordRequestDto dto);
     UserUpdateProfileResponseDto updateProfile(Long userId, UserUpdateProfileRequestDto dto);
 
-    void changePassword(Long userId, ChangePasswordRequestDto dto);
+    //for 'me'
+    UserUpdateProfileResponseDto updateMyProfile(UserUpdateProfileRequestDto dto);
+    void changeMyPassword(ChangePasswordRequestDto dto);
 
 
     UserRegistrationResponseDto createUser(UserRegistrationRequestDto dto);
     void deleteUser(Long id);
-
-
-
-
 }

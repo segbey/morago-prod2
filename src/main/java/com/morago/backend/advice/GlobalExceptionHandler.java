@@ -179,6 +179,34 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error", req, null);
     }
 
+    /* ---------- 409: business conflicts (e.g., insufficient funds) ---------- */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex, HttpServletRequest req) {
+        // Можно тоньше распознать текст и выдать code, например INSF_FUNDS
+        return build(HttpStatus.CONFLICT, ex.getMessage(), req, null, "BUSINESS_CONFLICT");
+    }
+
+    /* ---------- 409: optimistic locking (concurrent updates) ---------- */
+    @ExceptionHandler({
+            org.springframework.dao.OptimisticLockingFailureException.class,
+            jakarta.persistence.OptimisticLockException.class
+    })
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(Exception ex, HttpServletRequest req) {
+        return build(HttpStatus.CONFLICT, "Concurrent update, please retry", req, null, "CONCURRENT_MODIFICATION");
+    }
+
+    /* ---------- 404: JPA not found fallbacks ---------- */
+    @ExceptionHandler(jakarta.persistence.EntityNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleEntityNotFound(jakarta.persistence.EntityNotFoundException ex,
+                                                              HttpServletRequest req) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), req, null);
+    }
+
+    @ExceptionHandler(java.util.NoSuchElementException.class)
+    public ResponseEntity<ErrorResponse> handleNoSuchElement(java.util.NoSuchElementException ex, HttpServletRequest req) {
+        return build(HttpStatus.NOT_FOUND, "Resource not found", req, null);
+    }
+
     /* ================= helpers ================= */
 
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message,

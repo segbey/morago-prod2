@@ -5,6 +5,7 @@ import com.morago.backend.config.security.handler.RestAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -23,6 +24,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -35,7 +37,9 @@ public class WebSecurityConfig {
     private final CustomUserDetailService customUserDetailService;
 
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint; // 401
-    private final RestAccessDeniedHandler restAccessDeniedHandler;           // 403
+    private final RestAccessDeniedHandler restAccessDeniedHandler;// 403
+
+    private final Environment env;
 
     private static final String[] SWAGGER_WHITELIST = {
             "/v3/api-docs/**",
@@ -50,6 +54,8 @@ public class WebSecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        boolean isLocalLike = Arrays.stream(env.getActiveProfiles())
+                .anyMatch(p -> p.equalsIgnoreCase("local") || p.equalsIgnoreCase("dev"));
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
@@ -63,8 +69,8 @@ public class WebSecurityConfig {
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers(WS_WHITELIST).permitAll()
                         .requestMatchers("/ws-health/**", "/ws-native/**", "/send-test", "/api/test/**").permitAll()
-                        
-                        .requestMatchers("/user/**", "/api/users/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/api/me/**").hasAnyRole("USER","TRANSLATOR","ADMIN")
+                        .requestMatchers("/api/users/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/translator/**", "/translators/**").hasAnyRole("TRANSLATOR", "ADMIN")
                         .anyRequest().authenticated()
                 )

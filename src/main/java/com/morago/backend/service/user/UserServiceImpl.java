@@ -30,6 +30,8 @@ import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
+
 
 @Service
 @RequiredArgsConstructor
@@ -57,6 +59,18 @@ public class UserServiceImpl implements UserService {
     public User getCurrentUser() {
         String username = getAuthUsername();
         return findByUsernameOrThrow(username);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Long getCurrentUserId() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getPrincipal() == null || "anonymousUser".equals(auth.getPrincipal())) {
+            throw new AuthenticationCredentialsNotFoundException("Unauthenticated");
+        }
+
+        String username = auth.getName();
+        return findByUsernameOrThrow(username).getId();
     }
 
     private String getAuthUsername() {
@@ -116,10 +130,7 @@ public class UserServiceImpl implements UserService {
         String phone = toKoreanMobile010Strict(dto.getPhoneNumber());
         if (phone == null) throw new PhoneInvalidException(dto.getPhoneNumber());
 
-        String pwd = dto.getPassword();
-        if (pwd == null || pwd.isBlank()) throw new PasswordRequiredException();
-
-        if (!pwd.equals(dto.getConfirmPassword())) throw new PasswordMismatchException();
+        ensureValidNewPassword(dto.getPassword(), dto.getConfirmPassword());
 
         if (userRepository.existsByUsername(phone)) {
             throw new PhoneAlreadyExistsException(phone);
@@ -129,8 +140,23 @@ public class UserServiceImpl implements UserService {
         return phone;
     }
 
+    @Override
+    @Transactional
+    @PreAuthorize("hasAnyRole('USER','TRANSLATOR','ADMIN')")
+    public UserUpdateProfileResponseDto updateMyProfile(UserUpdateProfileRequestDto dto) {
+        var me = getCurrentUser();
+        return updateProfile(me.getId(), dto);
+    }
 
-    //for users
+    @Override
+    @Transactional
+    @PreAuthorize("hasAnyRole('USER','TRANSLATOR','ADMIN')")
+    public void changeMyPassword(ChangePasswordRequestDto dto) {
+        var me = getCurrentUser();
+        changePassword(me.getId(), dto);
+    }
+
+    //for admin
     @Override
     @Transactional
     public UserUpdateProfileResponseDto updateProfile(Long userId, UserUpdateProfileRequestDto dto) {
@@ -178,11 +204,7 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        if (!java.util.Objects.equals(dto.getNewPassword(), dto.getConfirmPassword())) {
-            throw new PasswordMismatchException();
-        }
-
-        validatePasswordStrength(dto.getNewPassword());
+        ensureValidNewPassword(dto.getNewPassword(), dto.getConfirmPassword());
 
         user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
         userRepository.save(user);
@@ -205,6 +227,13 @@ public class UserServiceImpl implements UserService {
              throw new WeakPasswordException("Password must contain letters and digits");
          }
     }
+
+    private void ensureValidNewPassword(String pwd, String confirm) {
+        if (pwd == null || pwd.isBlank()) throw new PasswordRequiredException();
+        if (!Objects.equals(pwd, confirm)) throw new PasswordMismatchException();
+        validatePasswordStrength(pwd);
+    }
+
 
     //CHANGE IT AS ADMIN'S PART
     @Override
@@ -231,8 +260,7 @@ public class UserServiceImpl implements UserService {
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void deleteUser(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("ID " + id));
+        User user = findByIdOrThrow(id);
      //   userRepository.deleteById(id);
         refreshTokenRepository.deleteByUser(user);
         userRepository.delete(user);

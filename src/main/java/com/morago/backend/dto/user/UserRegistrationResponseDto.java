@@ -9,6 +9,4 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UserRegistrationResponseDto {
     private String phoneNumber;
-    private String firstName;
-    private String lastName;
 }
