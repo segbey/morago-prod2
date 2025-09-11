@@ -13,11 +13,17 @@ public interface TranslatorProfileService {
 
     TranslatorProfileDto getById(Long id);
 
+    TranslatorProfileDto getByUserId(Long userId);
+
     TranslatorProfileDto update(Long id, TranslatorProfileDto dto);
 
     void delete(Long id);
     List<TranslatorProfileDto> getAll();
     Page<TranslatorProfileDto> getAll(Pageable pageable);
+
+    List<TranslatorProfileDto> getOnlineTranslators();
+    List<TranslatorProfileDto> getTranslatorsByTheme(Long themeId);
+    List<TranslatorProfileDto> getTranslatorsByLanguage(Long languageId);
 
 
 

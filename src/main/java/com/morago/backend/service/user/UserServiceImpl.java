@@ -1,5 +1,6 @@
 package com.morago.backend.service.user;
 
+import com.morago.backend.dto.password.ChangePasswordRequestDto;
 import com.morago.backend.dto.user.UserRequestDto;
 import com.morago.backend.dto.user.UserResponseDto;
 import com.morago.backend.entity.Role;
@@ -11,6 +12,8 @@ import com.morago.backend.repository.RoleRepository;
 import com.morago.backend.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +26,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final UserMapper userMapper;
@@ -101,7 +105,6 @@ public class UserServiceImpl implements UserService {
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("ID " + id));
-     //   userRepository.deleteById(id);
         refreshTokenRepository.deleteByUser(user);
         userRepository.delete(user);
     }
@@ -113,5 +116,29 @@ public class UserServiceImpl implements UserService {
                         .orElseThrow(() -> new IllegalArgumentException("Role not found: " + name)))
                 .collect(Collectors.toSet());
     }
-}
 
+    @Override
+    public Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+        User user = findByUsernameOrThrow(authentication.getName());
+        return user.getId();
+    }
+
+    @Override
+    @Transactional
+    public void changeMyPassword(ChangePasswordRequestDto dto) {
+        Long currentUserId = getCurrentUserId();
+        if (currentUserId == null) {
+            throw new IllegalStateException("No authenticated user");
+        }
+
+        User user = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new UserNotFoundException(currentUserId.toString()));
+
+        user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        userRepository.save(user);
+    }
+}

@@ -59,8 +59,7 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
                 .user(user)
                 .email(dto.getEmail())
                 .dateOfBirth(dto.getDateOfBirth())
-                .isAvailable(dto.getIsAvailable())
-                .isOnline(dto.getIsOnline())
+                .isVerified(Boolean.TRUE.equals(dto.getIsVerified()))
                 .levelOfKorean(dto.getLevelOfKorean())
                 .languages(languages)
                 .themes(themes)
@@ -78,15 +77,26 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public TranslatorProfileDto getByUserId(Long userId) {
+        return profileRepo.findByUserId(userId)
+                .map(mapper::toDto)
+                .orElseThrow(() -> new ResourceNotFoundException("Translator profile not found for user: " + userId));
+    }
+
+    @Override
     public TranslatorProfileDto update(Long id, TranslatorProfileDto dto) {
         TranslatorProfile profile = profileRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
         profile.setEmail(dto.getEmail());
         profile.setDateOfBirth(dto.getDateOfBirth());
-        profile.setIsAvailable(dto.getIsAvailable());
         profile.setIsOnline(dto.getIsOnline());
         profile.setLevelOfKorean(dto.getLevelOfKorean());
+
+        if (dto.getIsVerified() != null) {
+            profile.setIsVerified(dto.getIsVerified());
+        }
 
         if (dto.getLanguageIds() != null) {
             Set<Language> languages = dto.getLanguageIds().stream()
@@ -126,5 +136,29 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
     @Transactional(readOnly = true)
     public Page<TranslatorProfileDto> getAll(Pageable pageable) {
         return profileRepo.findAll(pageable).map(mapper::toDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TranslatorProfileDto> getOnlineTranslators() {
+        return profileRepo.findByIsOnlineTrue().stream()
+                .map(mapper::toDto)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TranslatorProfileDto> getTranslatorsByTheme(Long themeId) {
+        return profileRepo.findByThemes_Id(themeId).stream()
+                .map(mapper::toDto)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TranslatorProfileDto> getTranslatorsByLanguage(Long languageId) {
+        return profileRepo.findByLanguages_Id(languageId).stream()
+                .map(mapper::toDto)
+                .toList();
     }
 }

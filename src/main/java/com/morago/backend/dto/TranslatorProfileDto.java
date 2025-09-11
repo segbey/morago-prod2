@@ -15,6 +15,7 @@ public class TranslatorProfileDto {
     private Boolean isOnline;
     private String levelOfKorean;
     private LocalDateTime updatedAt;
+    private Boolean isVerified;
 
     private Long userId;
     private Set<Long> languageIds;

@@ -1,6 +1,7 @@
 package com.morago.backend.service.user;
 
 
+import com.morago.backend.dto.password.ChangePasswordRequestDto;
 import com.morago.backend.dto.user.UserRequestDto;
 import com.morago.backend.dto.user.UserResponseDto;
 import com.morago.backend.entity.User;
@@ -16,4 +17,9 @@ public interface UserService {
     List<UserResponseDto> getAllUsers();
     UserResponseDto updateUser(Long id, UserRequestDto dto);
     void deleteUser(Long id);
+
+    Long getCurrentUserId();
+    void changeMyPassword(ChangePasswordRequestDto dto);
+
+
 }
