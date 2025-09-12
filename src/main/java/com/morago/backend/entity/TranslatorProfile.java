@@ -50,6 +50,10 @@ public class TranslatorProfile extends Auditable {
     @Column(name = "is_online")
     private Boolean isOnline;
 
+    @Column(name = "is_verified")
+    private Boolean isVerified;
+
+
     @Column(name = "level_of_korean", length = 200)
     private String levelOfKorean;
 

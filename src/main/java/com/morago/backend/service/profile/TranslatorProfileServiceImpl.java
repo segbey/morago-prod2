@@ -77,6 +77,14 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public TranslatorProfileDto getByUserId(Long userId) {
+        return profileRepo.findByUserId(userId)
+                .map(mapper::toDto)
+                .orElseThrow(() -> new ResourceNotFoundException("Translator profile not found for user: " + userId));
+    }
+
+    @Override
     public TranslatorProfileDto update(Long id, TranslatorProfileDto dto) {
         TranslatorProfile profile = profileRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
@@ -128,5 +136,29 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
     @Transactional(readOnly = true)
     public Page<TranslatorProfileDto> getAll(Pageable pageable) {
         return profileRepo.findAll(pageable).map(mapper::toDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TranslatorProfileDto> getOnlineTranslators() {
+        return profileRepo.findByIsOnlineTrue().stream()
+                .map(mapper::toDto)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TranslatorProfileDto> getTranslatorsByTheme(Long themeId) {
+        return profileRepo.findByThemes_Id(themeId).stream()
+                .map(mapper::toDto)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TranslatorProfileDto> getTranslatorsByLanguage(Long languageId) {
+        return profileRepo.findByLanguages_Id(languageId).stream()
+                .map(mapper::toDto)
+                .toList();
     }
 }

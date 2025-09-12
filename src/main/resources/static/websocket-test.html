@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebSocket Integration Test</title>
+    <title>WebSocket + WebRTC Signaling Test</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <style>
@@ -11,7 +11,7 @@
         .container { max-width: 1200px; margin: 0 auto; }
         .section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
         .log { height: 200px; overflow-y: scroll; border: 1px solid #ddd; padding: 10px; background: #f9f9f9; margin: 10px 0; }
-        input, textarea, button { margin: 5px; padding: 8px; }
+        input, button { margin: 5px; padding: 8px; }
         button { background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
         button:hover { background: #0056b3; }
         .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
@@ -22,7 +22,7 @@
 </head>
 <body>
 <div class="container">
-    <h1>WebSocket Integration Test</h1>
+    <h1>WebSocket + WebRTC Signaling Test</h1>
 
     <div class="section">
         <h2>Connection Status</h2>
@@ -31,40 +31,18 @@
         <button onclick="disconnect()">Disconnect</button>
     </div>
 
-    <!-- Notification Testing -->
     <div class="section">
-        <h2>Notification Testing</h2>
+        <h2>WebRTC Signaling Testing</h2>
         <div>
-            <input type="text" id="notifTitle" placeholder="Notification Title" value="Test Notification">
-            <input type="text" id="notifText" placeholder="Notification Text" value="This is a test message">
-            <input type="text" id="recipientId" placeholder="Recipient ID (empty for broadcast)" value="">
-            <button onclick="sendNotification()">Send Notification</button>
+            <input type="text" id="localUserId" placeholder="Local User ID" value="user1">
+            <input type="text" id="remoteUserId" placeholder="Remote User ID" value="user2">
         </div>
         <div>
-            <h4>Received Notifications:</h4>
-            <div id="notificationLog" class="log"></div>
-        </div>
-    </div>
-
-    <!-- Call Signaling Testing -->
-    <div class="section">
-        <h2>Call Signaling Testing</h2>
-        <div>
-            <input type="text" id="callerId" placeholder="Caller ID" value="user1">
-            <input type="text" id="callRecipientId" placeholder="Recipient ID" value="user2">
-            <input type="text" id="callId" placeholder="Call ID" value="call123">
-            <input type="text" id="themeId" placeholder="Theme ID" value="1">
+            <button onclick="createOffer()">Create Offer</button>
         </div>
         <div>
-            <button onclick="initiateCall()">Initiate Call</button>
-            <button onclick="acceptCall()">Accept Call</button>
-            <button onclick="rejectCall()">Reject Call</button>
-            <button onclick="endCall()">End Call</button>
-            <button onclick="translatorJoin()">Translator Join</button>
-        </div>
-        <div>
-            <h4>Call Messages:</h4>
-            <div id="callLog" class="log"></div>
+            <h4>WebRTC Logs:</h4>
+            <div id="webrtcLog" class="log"></div>
         </div>
     </div>
 
@@ -77,185 +55,83 @@
 
 <script>
     let stompClient = null;
-    let currentUserId = 'testUser_' + Math.floor(Math.random() * 1000);
+    let pc;
+    let currentUserId = 'testUser_' + Math.floor(Math.random()*1000);
 
     function connect() {
         const socket = new SockJS('http://localhost:8080/ws');
         stompClient = Stomp.over(socket);
-
-        stompClient.connect({
-            'user': currentUserId
-        }, function (frame) {
-            updateStatus('Connected as: ' + currentUserId, true);
-            log('Connected: ' + frame);
-
-            stompClient.subscribe('/user/queue/notifications', function (message) {
-                const notification = JSON.parse(message.body);
-                logNotification(notification);
-                log('Notification received: ' + message.body);
-            });
-
-            stompClient.subscribe('/topic/notifications', function (message) {
-                const notification = JSON.parse(message.body);
-                logNotification(notification, 'BROADCAST');
-                log('Broadcast notification: ' + message.body);
-            });
-
-            stompClient.subscribe('/user/queue/calls', function (message) {
-                const callMessage = JSON.parse(message.body);
-                logCall(callMessage);
-                log('Call message received: ' + message.body);
-            });
-
-            stompClient.subscribe('/topic/call-room/call123', function (message) {
-                const callMessage = JSON.parse(message.body);
-                logCall(callMessage, 'ROOM');
-                log('Call room message: ' + message.body);
-            });
-
-            stompClient.subscribe('/topic/user-status', function (message) {
-                log('User status update: ' + message.body);
-            });
-
-        }, function (error) {
-            updateStatus('Connection failed: ' + error, false);
-            log('Connection error: ' + error);
-        });
+        stompClient.connect({'user': currentUserId}, frame => {
+            updateStatus('Connected as: '+currentUserId, true);
+            log('Connected: '+frame);
+            stompClient.subscribe('/user/queue/signaling', msg => handleSignalingMessage(JSON.parse(msg.body)));
+        }, error => { updateStatus('Connection failed: '+error,false); log('Connection error: '+error); });
     }
 
     function disconnect() {
-        if (stompClient !== null) {
-            stompClient.disconnect();
-        }
-        updateStatus('Disconnected', false);
+        if(stompClient) stompClient.disconnect();
+        updateStatus('Disconnected',false);
         log('Disconnected from WebSocket');
     }
 
-    function sendNotification() {
-        if (stompClient && stompClient.connected) {
-            const notification = {
-                title: document.getElementById('notifTitle').value,
-                text: document.getElementById('notifText').value,
-                recipientId: document.getElementById('recipientId').value || null,
-                type: 'INFO'
-            };
+    function createOffer() {
+        pc = new RTCPeerConnection();
+        pc.onicecandidate = event => {
+            if(event.candidate && stompClient && stompClient.connected) {
+                stompClient.send('/app/call.ice', {}, JSON.stringify({from:document.getElementById('localUserId').value,to:document.getElementById('remoteUserId').value,candidate:event.candidate}));
+                logWebRTC('ICE candidate sent');
+            }
+        };
+        pc.createOffer().then(offer => {
+            pc.setLocalDescription(offer);
+            stompClient.send('/app/call.offer', {}, JSON.stringify({from:document.getElementById('localUserId').value,to:document.getElementById('remoteUserId').value,sdp:offer}));
+            logWebRTC('Offer created and sent via WebSocket');
+        });
+    }
 
-            stompClient.send('/app/notification.send', {}, JSON.stringify(notification));
-            log('Sent notification: ' + JSON.stringify(notification));
-        } else {
-            alert('Not connected to WebSocket');
+    function handleSignalingMessage(data) {
+        if(!pc) pc = new RTCPeerConnection();
+        if(data.sdp) {
+            const desc = new RTCSessionDescription(data.sdp);
+            pc.setRemoteDescription(desc).then(() => {
+                logWebRTC('SDP set from remote');
+                if(desc.type==='offer') pc.createAnswer().then(answer=>{
+                    pc.setLocalDescription(answer);
+                    stompClient.send('/app/call.answer', {}, JSON.stringify({from:document.getElementById('localUserId').value,to:data.from,sdp:answer}));
+                    logWebRTC('Answer sent via WebSocket');
+                });
+            });
+        } else if(data.candidate) {
+            pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+            logWebRTC('ICE candidate added from remote');
         }
     }
 
-    function initiateCall() {
-        if (stompClient && stompClient.connected) {
-            const callMessage = {
-                callId: document.getElementById('callId').value,
-                callerId: document.getElementById('callerId').value,
-                recipientId: document.getElementById('callRecipientId').value,
-                themeId: document.getElementById('themeId').value,
-                type: 'CALL_INITIATE'
-            };
-
-            stompClient.send('/app/call.initiate', {}, JSON.stringify(callMessage));
-            log('Initiated call: ' + JSON.stringify(callMessage));
-        } else {
-            alert('Not connected to WebSocket');
-        }
-    }
-
-    function acceptCall() {
-        if (stompClient && stompClient.connected) {
-            const callMessage = {
-                callId: document.getElementById('callId').value,
-                callerId: document.getElementById('callerId').value,
-                recipientId: document.getElementById('callRecipientId').value,
-                type: 'CALL_ACCEPT'
-            };
-
-            stompClient.send('/app/call.accept', {}, JSON.stringify(callMessage));
-            log('Accepted call: ' + JSON.stringify(callMessage));
-        }
-    }
-
-    function rejectCall() {
-        if (stompClient && stompClient.connected) {
-            const callMessage = {
-                callId: document.getElementById('callId').value,
-                callerId: document.getElementById('callerId').value,
-                recipientId: document.getElementById('callRecipientId').value,
-                type: 'CALL_REJECT'
-            };
-
-            stompClient.send('/app/call.reject', {}, JSON.stringify(callMessage));
-            log('Rejected call: ' + JSON.stringify(callMessage));
-        }
-    }
-
-    function endCall() {
-        if (stompClient && stompClient.connected) {
-            const callMessage = {
-                callId: document.getElementById('callId').value,
-                type: 'CALL_END'
-            };
-
-            stompClient.send('/app/call.end', {}, JSON.stringify(callMessage));
-            log('Ended call: ' + JSON.stringify(callMessage));
-        }
-    }
-
-    function translatorJoin() {
-        if (stompClient && stompClient.connected) {
-            const callMessage = {
-                callId: document.getElementById('callId').value,
-                translatorId: 'translator_' + currentUserId,
-                type: 'TRANSLATOR_JOIN'
-            };
-
-            stompClient.send('/app/call.translator.join', {}, JSON.stringify(callMessage));
-            log('Translator joined: ' + JSON.stringify(callMessage));
-        }
-    }
-
-    function updateStatus(message, connected) {
+    function updateStatus(msg,connected) {
         const statusDiv = document.getElementById('status');
-        statusDiv.textContent = message;
-        statusDiv.className = 'status ' + (connected ? 'connected' : 'disconnected');
+        statusDiv.textContent=msg;
+        statusDiv.className='status '+(connected?'connected':'disconnected');
     }
 
-    function log(message) {
-        const logDiv = document.getElementById('allMessagesLog');
-        const timestamp = new Date().toLocaleTimeString();
-        logDiv.innerHTML += '<div>[' + timestamp + '] ' + message + '</div>';
-        logDiv.scrollTop = logDiv.scrollHeight;
+    function log(msg) {
+        const logDiv=document.getElementById('allMessagesLog');
+        const timestamp=new Date().toLocaleTimeString();
+        logDiv.innerHTML+=`[${timestamp}] ${msg}<br>`;
+        logDiv.scrollTop=logDiv.scrollHeight;
     }
 
-    function logNotification(notification, prefix = '') {
-        const logDiv = document.getElementById('notificationLog');
-        const timestamp = new Date().toLocaleTimeString();
-        const prefixText = prefix ? '[' + prefix + '] ' : '';
-        logDiv.innerHTML += '<div class="message-received">[' + timestamp + '] ' + prefixText +
-            '<strong>' + notification.title + '</strong>: ' + notification.text +
-            (notification.sender ? ' (from: ' + notification.sender + ')' : '') + '</div>';
-        logDiv.scrollTop = logDiv.scrollHeight;
-    }
-
-    function logCall(callMessage, prefix = '') {
-        const logDiv = document.getElementById('callLog');
-        const timestamp = new Date().toLocaleTimeString();
-        const prefixText = prefix ? '[' + prefix + '] ' : '';
-        logDiv.innerHTML += '<div class="message-received">[' + timestamp + '] ' + prefixText +
-            '<strong>' + callMessage.type + '</strong> - Call ID: ' + callMessage.callId +
-            (callMessage.callerId ? ', Caller: ' + callMessage.callerId : '') +
-            (callMessage.recipientId ? ', Recipient: ' + callMessage.recipientId : '') + '</div>';
-        logDiv.scrollTop = logDiv.scrollHeight;
+    function logWebRTC(msg) {
+        const logDiv=document.getElementById('webrtcLog');
+        const timestamp=new Date().toLocaleTimeString();
+        logDiv.innerHTML+=`[${timestamp}] ${msg}<br>`;
+        logDiv.scrollTop=logDiv.scrollHeight;
     }
 
     function clearLogs() {
-        document.getElementById('allMessagesLog').innerHTML = '';
-        document.getElementById('notificationLog').innerHTML = '';
-        document.getElementById('callLog').innerHTML = '';
+        document.getElementById('allMessagesLog').innerHTML='';
+        document.getElementById('webrtcLog').innerHTML='';
     }
 </script>
 </body>
 </html>
+
