@@ -2,6 +2,7 @@ package com.morago.backend.entity;
 
 
 import com.morago.backend.entity.enumFiles.EStatus;
+import com.morago.backend.listener.Auditable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -13,8 +14,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -30,7 +32,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Deposit extends Auditable{
+public class Deposit extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -48,13 +50,13 @@ public class Deposit extends Auditable{
     @Column(name = "name_of_bank", length = 200, nullable = false)
     private String nameOfBank;
 
-    @jakarta.validation.constraints.NotNull
-    @PositiveOrZero
+    @NotNull
+    @DecimalMin("0.00")
     @Column(name = "coin_decimal", precision = 10, scale = 2, nullable = false)
     private BigDecimal coinDecimal;
 
-    @jakarta.validation.constraints.NotNull
-    @PositiveOrZero
+    @NotNull
+    @DecimalMin("0.00")
     @Column(name = "won_decimal", precision = 10, scale = 2, nullable = false)
     private BigDecimal wonDecimal;
 

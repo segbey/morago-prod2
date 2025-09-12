@@ -1,6 +1,7 @@
 package com.morago.backend.service.profile;
 
 import com.morago.backend.dto.UserProfileDto;
+
 import java.util.List;
 
 public interface UserProfileService {

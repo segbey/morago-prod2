@@ -1,7 +1,8 @@
 package com.morago.backend.mapper;
 
 import com.morago.backend.dto.user.UserRegistrationRequestDto;
-import com.morago.backend.dto.user.UserResponseDto;
+import com.morago.backend.dto.user.UserRegistrationResponseDto;
+import com.morago.backend.dto.user.UserUpdateProfileResponseDto;
 import com.morago.backend.entity.User;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -16,8 +17,11 @@ public interface UserMapper {
     @Mapping(target = "translatorProfile", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "balance", ignore = true)
     User toEntity(UserRegistrationRequestDto dto);
 
     @Mapping(target = "phoneNumber", source = "username")
-    UserResponseDto toResponseDto(User user);
+    UserRegistrationResponseDto toResponseDto(User user);
+
+    UserUpdateProfileResponseDto toUpdateProfileResponseDto(User user);
 }

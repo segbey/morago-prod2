@@ -1,73 +1,119 @@
 package com.morago.backend.service.withdrawal;
 
-import com.morago.backend.dto.WithdrawalDto;
+import com.morago.backend.entity.Money;
+import com.morago.backend.entity.User;
 import com.morago.backend.entity.Withdrawal;
-import com.morago.backend.mapper.WithdrawalMapper;
+import com.morago.backend.entity.enumFiles.EStatus;
+import com.morago.backend.entity.enumFiles.TransactionType;
+import com.morago.backend.exception.WithdrawalNotFoundException;
 import com.morago.backend.repository.WithdrawalRepository;
-import com.morago.backend.repository.UserRepository;
-import com.morago.backend.exception.ResourceNotFoundException;
+import com.morago.backend.service.transaction.TransactionService;
+import com.morago.backend.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class WithdrawalServiceImpl implements WithdrawalService {
-
-    private final WithdrawalRepository withdrawalRepository;
-    private final UserRepository userRepository;
-    private final WithdrawalMapper mapper;
-
-    private <T> T findOrThrow(java.util.Optional<T> optional, String entityName, Long id) {
-        return optional.orElseThrow(() -> new ResourceNotFoundException(entityName + " not found with id " + id));
-    }
+    private final WithdrawalRepository withdrawalRepo;
+    private final UserService userService;
+    private final TransactionService txnService;
 
     @Override
-    public WithdrawalDto createWithdrawal(WithdrawalDto dto) {
-        Withdrawal withdrawal = mapper.toEntity(dto);
-
-        if (dto.getUserId() != null) {
-            withdrawal.setUser(findOrThrow(userRepository.findById(dto.getUserId()), "User", dto.getUserId()));
+    public Long requestWithdrawal(Long userId, String accountNumber, String holder, String bank, BigDecimal wonAmount) {
+        BigDecimal amt = Money.s2(wonAmount);
+        if (amt.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Amount must be > 0");
         }
 
-        return mapper.toDto(withdrawalRepository.save(withdrawal));
-    }
-
-    @Override
-    public WithdrawalDto getWithdrawalById(Long id) {
-        return mapper.toDto(findOrThrow(withdrawalRepository.findById(id), "Withdrawal", id));
-    }
-
-    @Override
-    public List<WithdrawalDto> getAllWithdrawals() {
-        return withdrawalRepository.findAll().stream().map(mapper::toDto).toList();
-    }
-
-    @Override
-    public WithdrawalDto updateWithdrawal(Long id, WithdrawalDto dto) {
-        Withdrawal withdrawal = findOrThrow(withdrawalRepository.findById(id), "Withdrawal", id);
-
-        withdrawal.setAccountNumber(dto.getAccountNumber());
-        withdrawal.setAccountHolder(dto.getAccountHolder());
-        withdrawal.setNameOfBank(dto.getNameOfBank());
-        withdrawal.setSumDecimal(dto.getSumDecimal());
-        withdrawal.setStatus(dto.getStatus());
-
-        if (dto.getUserId() != null) {
-            withdrawal.setUser(findOrThrow(userRepository.findById(dto.getUserId()), "User", dto.getUserId()));
+        User u = userService.findByIdOrThrow(userId);
+        if (u.getAvailable().compareTo(amt) < 0) {
+            throw new IllegalStateException("Insufficient available funds");
         }
 
-        return mapper.toDto(withdrawalRepository.save(withdrawal));
+        u.setReserved(u.getReserved().add(amt));
+
+        txnService.log(
+                u,
+                TransactionType.WITHDRAW_REQUEST,
+                amt,
+                u.getBalance(),
+                u.getBalance(),
+                null,
+                "Withdrawal requested (reserved)",
+                EStatus.SUCCESSFUL
+        );
+
+        Withdrawal w = Withdrawal.builder()
+                .user(u)
+                .accountNumber(accountNumber)
+                .accountHolder(holder)
+                .nameOfBank(bank)
+                .sumDecimal(amt)
+                .status(EStatus.PENDING)
+                .build();
+
+        return withdrawalRepo.save(w).getId();
     }
 
     @Override
-    public void deleteWithdrawal(Long id) {
-        if (!withdrawalRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Withdrawal not found with id " + id);
+    public void decideWithdrawal(Long withdrawalId, boolean approve, String adminNote) {
+        Withdrawal w = withdrawalRepo.findById(withdrawalId).orElseThrow();
+        if (w.getStatus() != EStatus.PENDING) return;
+
+        User u = userService.findByIdOrThrow(w.getUser().getId());
+        BigDecimal amt = Money.s2(w.getSumDecimal());
+
+        if (approve) {
+            if (u.getReserved().compareTo(amt) < 0) {
+                throw new IllegalStateException("Reserved < amount");
+            }
+            BigDecimal before = u.getBalance();
+            u.setReserved(u.getReserved().subtract(amt));
+            u.setBalance(u.getBalance().subtract(amt));
+
+            txnService.log(
+                    u,
+                    TransactionType.WITHDRAW_APPROVE,
+                    amt,
+                    before,
+                    u.getBalance(),
+                    "withdraw:" + w.getId(),
+                    "Withdrawal approved: " + adminNote,
+                    EStatus.SUCCESSFUL
+            );
+
+            w.setStatus(EStatus.SUCCESSFUL);
+        } else {
+            if (u.getReserved().compareTo(amt) < 0) {
+                throw new IllegalStateException("Reserved < amount");
+            }
+            BigDecimal before = u.getBalance();
+            u.setReserved(u.getReserved().subtract(amt));
+
+            txnService.log(
+                    u,
+                    TransactionType.WITHDRAW_REJECT,
+                    amt,
+                    before,
+                    before,
+                    "withdraw:" + w.getId(),
+                    "Withdrawal rejected: " + adminNote,
+                    EStatus.SUCCESSFUL
+            );
+
+            w.setStatus(EStatus.FAILED);
         }
-        withdrawalRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Withdrawal findByIdOrThrow(Long id) {
+        return withdrawalRepo.findById(id)
+                .orElseThrow(() -> new WithdrawalNotFoundException(id));
     }
 }

@@ -1,5 +1,6 @@
 package com.morago.backend.entity;
 
+import com.morago.backend.listener.Auditable;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,6 +14,7 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -23,6 +25,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -53,8 +56,14 @@ public class User extends Auditable implements UserDetails {
     @Column(name = "last_name", length = 200)
     private String lastName;
 
-    @Column(precision = 21, scale = 2)
-    private BigDecimal balance;
+    @Column(name = "balance", nullable = false, precision = 19, scale = 2)
+    private BigDecimal balance = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+
+    @Column(name = "reserved", nullable = false, precision = 19, scale = 2)
+    private BigDecimal reserved = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+
+    @Version
+    private Long version;
 
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
@@ -112,6 +121,19 @@ public class User extends Auditable implements UserDetails {
     public void setTranslatorProfile(TranslatorProfile p) {
         this.translatorProfile = p;
         if (p != null) p.setUser(this);
+    }
+
+    public void setBalance(BigDecimal b) {
+        this.balance = b == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+                : b.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal getAvailable() {
+        return balance.subtract(reserved).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public void setReserved(BigDecimal r) {
+        this.reserved = (r == null ? BigDecimal.ZERO : r).setScale(2, RoundingMode.HALF_UP);
     }
 
 }

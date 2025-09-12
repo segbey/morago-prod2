@@ -4,7 +4,7 @@ import com.morago.backend.dto.tokens.JWTRequest;
 import com.morago.backend.dto.tokens.JWTResponse;
 import com.morago.backend.dto.tokens.RefreshTokenRequest;
 import com.morago.backend.dto.user.UserRegistrationRequestDto;
-import com.morago.backend.dto.user.UserResponseDto;
+import com.morago.backend.dto.user.UserRegistrationResponseDto;
 import com.morago.backend.service.auth.AuthService;
 import com.morago.backend.service.token.RefreshTokenService;
 import com.morago.backend.service.user.UserService;
@@ -79,7 +79,7 @@ public class MainController {
                     @ApiResponse(responseCode = "401", description = "Invalid or expired refresh token")
             }
     )
-    @PostMapping("/refresh_token")
+    @PostMapping("/refresh")
     public ResponseEntity<JWTResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
         JWTResponse jwtResponse = refreshTokenService.refreshToken(request.getRefreshToken());
         return ResponseEntity.ok(jwtResponse);
@@ -90,13 +90,13 @@ public class MainController {
             description = "Registers a new user with role ROLE_USER. Phone format strictly 01012345678.",
             responses = {
                     @ApiResponse(responseCode = "201", description = "User created",
-                            content = @Content(schema = @Schema(implementation = UserResponseDto.class))),
+                            content = @Content(schema = @Schema(implementation = UserRegistrationResponseDto.class))),
                     @ApiResponse(responseCode = "400", description = "Validation error"),
                     @ApiResponse(responseCode = "409", description = "Phone already registered")
             }
     )
     @PostMapping("/register")
-    public ResponseEntity<UserResponseDto> registerUser(@Valid @RequestBody UserRegistrationRequestDto dto) {
+    public ResponseEntity<UserRegistrationResponseDto> registerUser(@Valid @RequestBody UserRegistrationRequestDto dto) {
         return ResponseEntity.status(201).body(userService.registerUser(dto));
     }
 
@@ -105,13 +105,13 @@ public class MainController {
             description = "Registers a new translator with role ROLE_TRANSLATOR. Phone format 01012345678.",
             responses = {
                     @ApiResponse(responseCode = "201", description = "Translator created",
-                            content = @Content(schema = @Schema(implementation = UserResponseDto.class))),
+                            content = @Content(schema = @Schema(implementation = UserRegistrationResponseDto.class))),
                     @ApiResponse(responseCode = "400", description = "Validation error"),
                     @ApiResponse(responseCode = "409", description = "Phone already registered")
             }
     )
     @PostMapping("/register/translator")
-    public ResponseEntity<UserResponseDto> registerTranslator(@Valid @RequestBody UserRegistrationRequestDto dto) {
+    public ResponseEntity<UserRegistrationResponseDto> registerTranslator(@Valid @RequestBody UserRegistrationRequestDto dto) {
         return ResponseEntity.status(201).body(userService.registerTranslator(dto));
     }
 

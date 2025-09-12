@@ -1,6 +1,7 @@
 package com.morago.backend.entity;
 
 import com.morago.backend.entity.enumFiles.Roles;
+import com.morago.backend.listener.Auditable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -15,6 +16,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.NaturalId;
 
 @Entity
 @Table(
@@ -22,13 +24,13 @@ import lombok.Setter;
         uniqueConstraints = @UniqueConstraint(name = "uk_roles_role_name", columnNames = "role_name")
 )
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class Role extends Auditable{
+public class Role extends Auditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Enumerated(EnumType.STRING)
-    @org.hibernate.annotations.NaturalId
+    @NaturalId
     @Column(name = "role_name", nullable = false, unique = true, length = 64)
     private Roles name;
 }

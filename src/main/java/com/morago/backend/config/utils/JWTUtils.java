@@ -1,13 +1,15 @@
 package com.morago.backend.config.utils;
 
 import com.morago.backend.entity.enumFiles.TokenType;
-import com.morago.backend.exception.ExpireJwtTokenException;
-import com.morago.backend.exception.InvalidJwtTokenException;
+import com.morago.backend.exception.token.ExpireJwtTokenException;
+import com.morago.backend.exception.token.InvalidJwtTokenException;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.Claims;
+import jakarta.annotation.PostConstruct;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -16,6 +18,7 @@ import java.security.Key;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
@@ -37,15 +40,20 @@ public class JWTUtils {
         return (type == TokenType.ACCESS) ? getAccessSigningKey() : getRefreshSigningKey();
     }
 
-    @jakarta.annotation.PostConstruct
+    @PostConstruct
     void validateConfig() {
+        requireNonEmpty(jwtProperties.getIssuer(), "issuer");
         requireNonEmpty(jwtProperties.getAccessSecret(), "accessSecret");
         requireNonEmpty(jwtProperties.getRefreshSecret(), "refreshSecret");
 
         getAccessSigningKey();
         getRefreshSigningKey();
+
         if (jwtProperties.getAccessExpirationMs() <= 0 || jwtProperties.getRefreshExpirationMs() <= 0) {
             throw new IllegalStateException("JWT expiration must be > 0");
+        }
+        if (jwtProperties.getAccessSecret().equals(jwtProperties.getRefreshSecret())) {
+            throw new IllegalStateException("Access and Refresh secrets must be different");
         }
     }
     private static void requireNonEmpty(String v, String name) {
@@ -61,9 +69,10 @@ public class JWTUtils {
         Date exp = new Date(now.getTime() + jwtProperties.getAccessExpirationMs());
 
         return Jwts.builder()
-                .setIssuer("morago")
-                .setId(java.util.UUID.randomUUID().toString())
+                .setIssuer(jwtProperties.getIssuer())
+                .setId(UUID.randomUUID().toString())
                 .setSubject(userDetails.getUsername())
+                .claim("token_type", TokenType.ACCESS.name())
                 .claim("roles", roles)
                 .setIssuedAt(now)
                 .setExpiration(exp)
@@ -76,9 +85,10 @@ public class JWTUtils {
         Date exp = new Date(now.getTime() + jwtProperties.getRefreshExpirationMs());
 
         return Jwts.builder()
-                .setIssuer("morago")
-                .setId(java.util.UUID.randomUUID().toString())
+                .setIssuer(jwtProperties.getIssuer())
+                .setId(UUID.randomUUID().toString())
                 .setSubject(userDetails.getUsername())
+                .claim("token_type", TokenType.REFRESH.name())
                 .setIssuedAt(now)
                 .setExpiration(exp)
                 .signWith(getRefreshSigningKey(), SignatureAlgorithm.HS256)
@@ -101,14 +111,21 @@ public class JWTUtils {
         parse(token, type);
     }
 
-    private io.jsonwebtoken.Claims parse(String token, TokenType type) {
+    private Claims parse(String token, TokenType expectedType) {
         try {
-            return Jwts.parserBuilder()
-                    .setSigningKey(getSigningKey(type))
+            Claims claims = Jwts.parserBuilder()
+                    .requireIssuer(jwtProperties.getIssuer())
                     .setAllowedClockSkewSeconds(CLOCK_SKEW_SEC)
+                    .setSigningKey(getSigningKey(expectedType))
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
+
+            String actualType = claims.get("token_type", String.class);
+            if (actualType == null || !actualType.equalsIgnoreCase(expectedType.name())) {
+                throw new InvalidJwtTokenException();
+            }
+            return claims;
         } catch (ExpiredJwtException e) {
             throw new ExpireJwtTokenException();
         } catch (JwtException | IllegalArgumentException e) {

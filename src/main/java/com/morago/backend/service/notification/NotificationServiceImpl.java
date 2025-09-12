@@ -34,7 +34,6 @@ public class NotificationServiceImpl implements NotificationService {
         Notification existing = getEntityById(id);
         existing.setTitle(dto.getTitle());
         existing.setText(dto.getText());
-        existing.setDateTime(dto.getDateTime());
         return notificationMapper.toDto(notificationRepository.save(existing));
     }
 
