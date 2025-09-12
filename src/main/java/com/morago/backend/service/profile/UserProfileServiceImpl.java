@@ -2,11 +2,10 @@ package com.morago.backend.service.profile;
 
 import com.morago.backend.dto.UserProfileDto;
 import com.morago.backend.entity.UserProfile;
-import com.morago.backend.mapper.UserProfileMapper;
-import com.morago.backend.repository.UserProfileRepository;
-import com.morago.backend.repository.UserRepository;
 import com.morago.backend.exception.ResourceNotFoundException;
+import com.morago.backend.repository.UserProfileRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,53 +17,27 @@ import java.util.List;
 public class UserProfileServiceImpl implements UserProfileService {
 
     private final UserProfileRepository userProfileRepository;
-    private final UserRepository userRepository;
-    private final UserProfileMapper mapper;
 
-    private <T> T findOrThrow(java.util.Optional<T> optional, String entityName, Long id) {
-        return optional.orElseThrow(() -> new ResourceNotFoundException(entityName + " not found with id " + id));
+    @Override
+    @Transactional(readOnly = true)
+    public UserProfile findByIdOrThrow(Long profileId) {
+        return userProfileRepository.findById(profileId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("UserProfile not found with id " + profileId));
     }
 
     @Override
-    public UserProfileDto createUserProfile(UserProfileDto dto) {
-        UserProfile userProfile = mapper.toEntity(dto);
-
-        if (dto.getUserId() != null) {
-            userProfile.setUser(findOrThrow(userRepository.findById(dto.getUserId()), "User", dto.getUserId()));
-        }
-
-        return mapper.toDto(userProfileRepository.save(userProfile));
+    @Transactional(readOnly = true)
+    public UserProfile findByUserIdOrThrow(Long userId) {
+        return userProfileRepository.findByUser_Id(userId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("UserProfile not found for userId " + userId));
     }
 
     @Override
-    public UserProfileDto getUserProfileById(Long id) {
-        UserProfile userProfile = findOrThrow(userProfileRepository.findById(id), "UserProfile", id);
-        return mapper.toDto(userProfile);
-    }
-
-    @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public List<UserProfileDto> getAllUserProfiles() {
-        return userProfileRepository.findAll().stream().map(mapper::toDto).toList();
-    }
-
-    @Override
-    public UserProfileDto updateUserProfile(Long id, UserProfileDto dto) {
-        UserProfile userProfile = findOrThrow(userProfileRepository.findById(id), "UserProfile", id);
-
-        userProfile.setFreeCallMade(dto.isFreeCallMade());
-
-        if (dto.getUserId() != null) {
-            userProfile.setUser(findOrThrow(userRepository.findById(dto.getUserId()), "User", dto.getUserId()));
-        }
-
-        return mapper.toDto(userProfileRepository.save(userProfile));
-    }
-
-    @Override
-    public void deleteUserProfile(Long id) {
-        if (!userProfileRepository.existsById(id)) {
-            throw new ResourceNotFoundException("UserProfile not found with id " + id);
-        }
-        userProfileRepository.deleteById(id);
+//        return userProfileRepository.findAll().stream().map(mapper::toDto).toList();
+        return null;
     }
 }

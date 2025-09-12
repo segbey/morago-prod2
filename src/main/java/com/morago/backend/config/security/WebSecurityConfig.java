@@ -45,7 +45,7 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/translators/**").hasAnyRole("TRANSLATOR", "ADMIN")
+                        .requestMatchers("/api/translators/**").hasAnyRole("TRANSLATOR", "ADMIN", "USER")
 
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers(WS_WHITELIST).permitAll()

@@ -9,5 +9,4 @@ public interface UserProfileService {
     List<UserProfileDto> getAllUserProfiles();
     UserProfileDto updateUserProfile(Long id, UserProfileDto dto);
     void deleteUserProfile(Long id);
-
 }
