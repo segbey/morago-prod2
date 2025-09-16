@@ -1,4 +1,4 @@
-package com.morago.backend.dto;
+package com.morago.backend.dto.user;
 
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;

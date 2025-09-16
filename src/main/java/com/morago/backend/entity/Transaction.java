@@ -1,9 +1,11 @@
 package com.morago.backend.entity;
 
+import com.morago.backend.config.jpa.BigDecimalScale2Converter;
 import com.morago.backend.entity.enumFiles.EStatus;
 import com.morago.backend.entity.enumFiles.TransactionType;
 import com.morago.backend.listener.Auditable;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -16,6 +18,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -52,7 +55,9 @@ public class Transaction extends Auditable {
 
     @NotNull
     @DecimalMin("0.00")
+    @Digits(integer = 17, fraction = 2)
     @Column(name = "amount", precision = 19, scale = 2, nullable = false)
+    @Convert(converter = BigDecimalScale2Converter.class)
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
@@ -61,11 +66,17 @@ public class Transaction extends Auditable {
     private EStatus status = EStatus.SUCCESSFUL;
 
     @NotNull
+    @DecimalMin("0.00")
+    @Digits(integer = 17, fraction = 2)
     @Column(name = "before_balance", precision = 19, scale = 2, nullable = false)
+    @Convert(converter = BigDecimalScale2Converter.class)
     private BigDecimal beforeBalance;
 
     @NotNull
+    @DecimalMin("0.00")
+    @Digits(integer = 17, fraction = 2)
     @Column(name = "after_balance", precision = 19, scale = 2, nullable = false)
+    @Convert(converter = BigDecimalScale2Converter.class)
     private BigDecimal afterBalance;
 
     @Column(name = "description", length = 500)

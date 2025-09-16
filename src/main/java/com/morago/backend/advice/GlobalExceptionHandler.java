@@ -1,7 +1,7 @@
 package com.morago.backend.advice;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
-import com.morago.backend.dto.ErrorResponse;
+import com.morago.backend.dto.common.ErrorResponse;
 import com.morago.backend.exception.ApiException;
 import com.morago.backend.exception.ResourceNotFoundException;
 import com.morago.backend.exception.UserNotFoundException;

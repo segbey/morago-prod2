@@ -1,6 +1,6 @@
 package com.morago.backend.mapper;
 
-import com.morago.backend.dto.deposit.DepositDto;
+import com.morago.backend.dto.billing.deposit.DepositDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

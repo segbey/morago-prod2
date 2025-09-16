@@ -1,9 +1,9 @@
 package com.morago.backend.controller;
 
-import com.morago.backend.dto.deposit.DepositConfirmResponse;
-import com.morago.backend.dto.deposit.DepositDto;
+import com.morago.backend.dto.billing.deposit.DepositConfirmResponse;
+import com.morago.backend.dto.billing.deposit.DepositDto;
 import com.morago.backend.dto.call.ChargeCallRequest;
-import com.morago.backend.dto.deposit.CreateDepositRequest;
+import com.morago.backend.dto.billing.deposit.CreateDepositRequest;
 import com.morago.backend.mapper.DepositMapper;
 import com.morago.backend.service.deposit.DepositService;
 import com.morago.backend.service.user.UserService;

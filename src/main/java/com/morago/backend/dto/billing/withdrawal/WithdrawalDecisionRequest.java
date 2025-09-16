@@ -1,4 +1,4 @@
-package com.morago.backend.dto.withdrawal;
+package com.morago.backend.dto.billing.withdrawal;
 
 import jakarta.validation.constraints.NotNull;
 

@@ -1,4 +1,4 @@
-package com.morago.backend.dto.deposit;
+package com.morago.backend.dto.billing.deposit;
 
 import com.morago.backend.entity.enumFiles.EStatus;
 

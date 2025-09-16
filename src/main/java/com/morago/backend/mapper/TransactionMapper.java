@@ -1,7 +1,7 @@
 package com.morago.backend.mapper;
 
-import com.morago.backend.dto.transaction.MyTransactionDto;
-import com.morago.backend.dto.transaction.TransactionAdminDto;
+import com.morago.backend.dto.billing.transaction.MyTransactionDto;
+import com.morago.backend.dto.billing.transaction.TransactionAdminDto;
 import com.morago.backend.entity.Transaction;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

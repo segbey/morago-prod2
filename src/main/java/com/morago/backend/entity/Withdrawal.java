@@ -1,8 +1,10 @@
 package com.morago.backend.entity;
 
+import com.morago.backend.config.jpa.BigDecimalScale2Converter;
 import com.morago.backend.entity.enumFiles.EStatus;
 import com.morago.backend.listener.Auditable;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -14,6 +16,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -55,7 +58,9 @@ public class Withdrawal extends Auditable {
 
     @NotNull
     @DecimalMin("0.00")
-    @Column(name = "sum_decimal", precision = 10, scale = 2, nullable = false)
+    @Digits(integer = 17, fraction = 2)
+    @Column(name = "sum_decimal", precision = 19, scale = 2, nullable = false)
+    @Convert(converter = BigDecimalScale2Converter.class)
     private BigDecimal sumDecimal;
 
     @Enumerated(EnumType.STRING)

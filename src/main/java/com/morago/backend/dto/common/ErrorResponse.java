@@ -1,4 +1,4 @@
-package com.morago.backend.dto;
+package com.morago.backend.dto.common;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

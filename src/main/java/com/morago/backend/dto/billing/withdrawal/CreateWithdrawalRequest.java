@@ -1,12 +1,14 @@
-package com.morago.backend.dto.deposit;
+package com.morago.backend.dto.billing.withdrawal;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+
 import java.math.BigDecimal;
 
-public record CreateDepositRequest(
+public record CreateWithdrawalRequest(
+        @NotNull Long userId,
+        @NotBlank String accountNumber,
         @NotBlank String accountHolder,
         @NotBlank String nameOfBank,
-        @NotNull @Positive BigDecimal wonAmount
+        @NotNull BigDecimal wonAmount
 ) {}
