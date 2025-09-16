@@ -1,7 +1,7 @@
 package com.morago.backend.config.security.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.morago.backend.dto.ErrorResponse;
+import com.morago.backend.dto.common.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 

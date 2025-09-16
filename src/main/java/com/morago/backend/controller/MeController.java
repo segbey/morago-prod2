@@ -20,9 +20,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -82,40 +81,25 @@ public class MeController {
     }
 
     @Operation(
-            summary = "Upload avatar",
-            description = "Allows an authenticated user to upload or update their profile avatar.",
+            summary = "Upload or update avatar",
+            description = "Allows an authenticated user to upload or replace their profile avatar.",
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Avatar uploaded successfully",
+                    @ApiResponse(responseCode = "200", description = "Avatar saved",
                             content = @Content(schema = @Schema(implementation = FileResponse.class))),
                     @ApiResponse(responseCode = "400", description = "File upload error"),
                     @ApiResponse(responseCode = "401", description = "Unauthorized"),
                     @ApiResponse(responseCode = "403", description = "Forbidden")
             }
     )
-    @PostMapping(value = "/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('USER','TRANSLATOR','ADMIN')")
+    @RequestMapping(
+            value = "/avatar",
+            method = { RequestMethod.POST, RequestMethod.PUT },
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
     public FileResponse uploadMyAvatar(
             @Parameter(description = "Image file (jpg, png, etc.)", required = true)
-            @RequestPart("file") MultipartFile file) {
-        return fileService.uploadMyAvatar(file);
-    }
-
-    @Operation(
-            summary = "Update avatar",
-            description = "Allows an authenticated user to replace their current avatar with a new one.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Avatar updated successfully",
-                            content = @Content(schema = @Schema(implementation = FileResponse.class))),
-                    @ApiResponse(responseCode = "400", description = "File upload error"),
-                    @ApiResponse(responseCode = "401", description = "Unauthorized"),
-                    @ApiResponse(responseCode = "403", description = "Forbidden")
-            }
-    )
-    @PutMapping(value = "/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('USER','TRANSLATOR','ADMIN')")
-    public FileResponse updateMyAvatar(
-            @Parameter(description = "New image file (jpg, png, etc.)", required = true)
-            @RequestPart("file") MultipartFile file) {
+            @RequestPart("file") MultipartFile file
+    ) {
         return fileService.uploadMyAvatar(file);
     }
 

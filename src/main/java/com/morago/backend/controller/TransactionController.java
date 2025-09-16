@@ -1,7 +1,7 @@
 package com.morago.backend.controller;
 
-import com.morago.backend.dto.transaction.MyTransactionDto;
-import com.morago.backend.dto.transaction.TransactionAdminDto;
+import com.morago.backend.dto.billing.transaction.MyTransactionDto;
+import com.morago.backend.dto.billing.transaction.TransactionAdminDto;
 import com.morago.backend.mapper.TransactionMapper;
 import com.morago.backend.service.transaction.TransactionService;
 import com.morago.backend.service.user.UserService;

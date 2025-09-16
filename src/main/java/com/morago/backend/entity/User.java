@@ -1,8 +1,10 @@
 package com.morago.backend.entity;
 
+import com.morago.backend.config.jpa.BigDecimalScale2Converter;
 import com.morago.backend.listener.Auditable;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -15,6 +17,8 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -57,10 +61,16 @@ public class User extends Auditable implements UserDetails {
     private String lastName;
 
     @Column(name = "balance", nullable = false, precision = 19, scale = 2)
-    private BigDecimal balance = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+    @Convert(converter = BigDecimalScale2Converter.class)
+    @DecimalMin("0.00")
+    @Digits(integer = 17, fraction = 2)
+    private BigDecimal balance = BigDecimal.ZERO;
 
     @Column(name = "reserved", nullable = false, precision = 19, scale = 2)
-    private BigDecimal reserved = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+    @Convert(converter = BigDecimalScale2Converter.class)
+    @DecimalMin("0.00")
+    @Digits(integer = 17, fraction = 2)
+    private BigDecimal reserved = BigDecimal.ZERO;
 
     @Version
     private Long version;
@@ -78,7 +88,7 @@ public class User extends Auditable implements UserDetails {
             inverseJoinColumns = @JoinColumn(name = "role_id"),
             uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "role_id"})
     )
-    private Set<Role> roles= new HashSet<>();;
+    private Set<Role> roles= new HashSet<>();
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private UserProfile userProfile;

@@ -1,6 +1,6 @@
 package com.morago.backend.service.profile;
 
-import com.morago.backend.dto.UserProfileDto;
+import com.morago.backend.dto.user.UserProfileDto;
 import com.morago.backend.entity.UserProfile;
 import com.morago.backend.exception.ResourceNotFoundException;
 import com.morago.backend.repository.UserProfileRepository;

@@ -1,6 +1,6 @@
 package com.morago.backend.mapper;
 
-import com.morago.backend.dto.withdrawal.WithdrawalDto;
+import com.morago.backend.dto.billing.withdrawal.WithdrawalDto;
 import com.morago.backend.entity.Withdrawal;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

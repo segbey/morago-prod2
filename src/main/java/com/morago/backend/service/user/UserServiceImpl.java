@@ -82,6 +82,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public User findByIdForUpdateOrThrow(Long id) {
+        return userRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new UserNotFoundException(id));
+    }
+
+    @Override
     @Transactional
     public UserRegistrationResponseDto registerUser(UserRegistrationRequestDto dto) {
         return register(dto, Roles.ROLE_USER);

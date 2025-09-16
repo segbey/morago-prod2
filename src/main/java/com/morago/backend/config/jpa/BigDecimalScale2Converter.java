@@ -6,7 +6,7 @@ import jakarta.persistence.Converter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-@Converter(autoApply = true)
+@Converter(autoApply = false)
 public class BigDecimalScale2Converter implements AttributeConverter<BigDecimal, BigDecimal> {
 
     @Override

@@ -12,6 +12,7 @@ public interface UserService {
     User findByIdOrThrow(Long id);
     User getCurrentUser();
     Long getCurrentUserId();
+    User findByIdForUpdateOrThrow(Long id);
 
     UserRegistrationResponseDto registerUser(UserRegistrationRequestDto dto);
     UserRegistrationResponseDto registerTranslator(UserRegistrationRequestDto dto);

@@ -1,18 +1,21 @@
-package com.morago.backend.dto.withdrawal;
+package com.morago.backend.dto.billing.transaction;
 
 import com.morago.backend.entity.enumFiles.EStatus;
+import com.morago.backend.entity.enumFiles.TransactionType;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-public record WithdrawalDto(
+public record TransactionAdminDto(
         Long id,
         Long userId,
+        TransactionType type,
         BigDecimal amount,
+        BigDecimal beforeBalance,
+        BigDecimal afterBalance,
+        String description,
+        String correlationId,
         EStatus status,
-        String accountNumber,
-        String accountHolder,
-        String nameOfBank,
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         LocalDateTime createdAt
 ) {}

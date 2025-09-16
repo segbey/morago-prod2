@@ -1,9 +1,11 @@
 package com.morago.backend.entity;
 
 
+import com.morago.backend.config.jpa.BigDecimalScale2Converter;
 import com.morago.backend.entity.enumFiles.EStatus;
 import com.morago.backend.listener.Auditable;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -52,12 +54,14 @@ public class Deposit extends Auditable {
 
     @NotNull
     @DecimalMin("0.00")
-    @Column(name = "coin_decimal", precision = 10, scale = 2, nullable = false)
+    @Column(name = "coin_decimal", precision = 19, scale = 2, nullable = false)
+    @Convert(converter = BigDecimalScale2Converter.class)
     private BigDecimal coinDecimal;
 
     @NotNull
     @DecimalMin("0.00")
-    @Column(name = "won_decimal", precision = 10, scale = 2, nullable = false)
+    @Column(name = "won_decimal", precision = 19, scale = 2, nullable = false)
+    @Convert(converter = BigDecimalScale2Converter.class)
     private BigDecimal wonDecimal;
 
     @Enumerated(EnumType.STRING)

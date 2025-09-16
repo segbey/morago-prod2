@@ -1,10 +1,10 @@
 package com.morago.backend.controller;
 
-import com.morago.backend.dto.withdrawal.CreateWithdrawalRequest;
-import com.morago.backend.dto.withdrawal.WithdrawalDecisionRequest;
+import com.morago.backend.dto.billing.withdrawal.CreateWithdrawalRequest;
+import com.morago.backend.dto.billing.withdrawal.WithdrawalDecisionRequest;
 import com.morago.backend.mapper.WithdrawalMapper;
 import com.morago.backend.service.withdrawal.WithdrawalService;
-import com.morago.backend.dto.withdrawal.WithdrawalDto;
+import com.morago.backend.dto.billing.withdrawal.WithdrawalDto;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
