@@ -13,6 +13,8 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Past;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -36,11 +38,11 @@ public class TranslatorProfile extends Auditable {
     private Long id;
 
     @Column(name = "date_of_birth")
-    @jakarta.validation.constraints.Past
+    @Past
     private LocalDate dateOfBirth;
 
     @Column(name = "email", length = 320, unique = true)
-    @jakarta.validation.constraints.Email
+    @Email
     private String email;
 
     @Column(name = "is_verified", nullable = false)
@@ -49,10 +51,6 @@ public class TranslatorProfile extends Auditable {
 
     @Column(name = "is_online")
     private Boolean isOnline;
-
-    @Column(name = "is_verified")
-    private Boolean isVerified;
-
 
     @Column(name = "level_of_korean", length = 200)
     private String levelOfKorean;
