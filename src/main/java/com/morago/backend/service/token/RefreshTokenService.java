@@ -25,5 +25,5 @@ public interface RefreshTokenService {
     void deleteByUser(User user);
     void deleteByToken(String token);
     JWTResponse refreshToken(String requestRefreshToken);
-    void logoutUserByRefreshToken(String refreshTokenStr);
+    void logout(String username, String refreshTokenNullable);
 }

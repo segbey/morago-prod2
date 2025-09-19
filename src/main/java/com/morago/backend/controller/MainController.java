@@ -17,11 +17,14 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Authentication", description = "User authentication and token management")
@@ -51,7 +54,7 @@ public class MainController {
             responses = {
                     @ApiResponse(responseCode = "200", description = "Successful authentication",
                             content = @Content(schema = @Schema(implementation = JWTResponse.class))),
-                    @ApiResponse(responseCode = "401", description = "Invalid credentials")
+                    @ApiResponse(responseCode = "400", description = "Invalid username or password")
             }
     )
     @PostMapping("/login")
@@ -117,27 +120,31 @@ public class MainController {
 
     @Operation(
             summary = "Log out",
-            description = "Invalidates the provided refresh token. Requires a valid Bearer token.",
+            description = "Invalidates refresh tokens. Requires a valid Bearer token.",
             security = @SecurityRequirement(name = "bearerAuth"),
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
+                    required = false,
                     content = @Content(
                             schema = @Schema(implementation = RefreshTokenRequest.class),
-                            examples = @ExampleObject(
-                                    name = "Example",
-                                    value = "{\"refreshToken\":\"<user_refresh_token>\"}"
-                            )
+                            examples = {
+                                    @ExampleObject(name = "Delete specific token",
+                                            value = "{\"refreshToken\":\"<user_refresh_token>\"}"),
+                                    @ExampleObject(name = "Delete all tokens (no body)", value = "")
+                            }
                     )
             ),
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Successfully logged out"),
+                    @ApiResponse(responseCode = "204", description = "Logged out (no content)"),
                     @ApiResponse(responseCode = "401", description = "Unauthorized")
             }
     )
     @PostMapping("/logout")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
-        refreshTokenService.logoutUserByRefreshToken(request.getRefreshToken());
-        return ResponseEntity.ok().build();
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logout(@RequestBody(required = false) RefreshTokenRequest request,
+                       Authentication auth) {
+        String username = auth.getName();
+        String providedToken = (request != null) ? request.getRefreshToken() : null;
+        refreshTokenService.logout(username, providedToken);
     }
 }

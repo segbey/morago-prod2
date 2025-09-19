@@ -6,6 +6,7 @@ import com.morago.backend.dto.tokens.JWTResponse;
 import com.morago.backend.entity.RefreshToken;
 import com.morago.backend.entity.User;
 import com.morago.backend.repository.RefreshTokenRepository;
+import com.morago.backend.service.profile.TranslatorProfileService;
 import com.morago.backend.service.user.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     private final UserService userService;
     private final JWTProperties jwtProperties;
     private final JWTUtils jwtUtils;
+    private final TranslatorProfileService translatorProfileService;
 
     @Override
     public void createRefreshToken(String username, String jwtTokenString) {
@@ -74,9 +76,16 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     }
 
     @Override
-    public void logoutUserByRefreshToken(String refreshTokenStr) {
-        RefreshToken refreshToken = findByTokenOrThrow(refreshTokenStr);
+    @Transactional
+    public void logout(String username, String refreshTokenNullable) {
+        User user = userService.findByUsernameOrThrow(username);
 
-        deleteByUser(refreshToken.getUser());
+        if (refreshTokenNullable == null || refreshTokenNullable.isBlank()) {
+            refreshTokenRepository.deleteByUser(user);
+        } else {
+            refreshTokenRepository.deleteByTokenAndUser(refreshTokenNullable, user);
+        }
+
+        translatorProfileService.setOnlineStatus(user, false);
     }
 }

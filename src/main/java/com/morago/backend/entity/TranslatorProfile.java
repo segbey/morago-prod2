@@ -79,4 +79,11 @@ public class TranslatorProfile extends Auditable {
     @Builder.Default
     private Set<Theme> themes = new java.util.HashSet<>();
 
+    @Column(name = "rating_avg", nullable = false)
+    @Builder.Default
+    private java.math.BigDecimal ratingAvg = java.math.BigDecimal.ZERO; // 0.00..5.00
+
+    @Column(name = "rating_count", nullable = false)
+    @Builder.Default
+    private Integer ratingCount = 0;
 }

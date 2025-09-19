@@ -1,6 +1,8 @@
 package com.morago.backend.service.profile;
 
 import com.morago.backend.dto.TranslatorProfileDto;
+import com.morago.backend.entity.TranslatorProfile;
+import com.morago.backend.entity.User;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 
@@ -26,5 +28,6 @@ public interface TranslatorProfileService {
     List<TranslatorProfileDto> getTranslatorsByLanguage(Long languageId);
 
 
-
+    void setOnlineStatus(User user, boolean b);
+    TranslatorProfile getForRatingOrThrow(Long translatorProfileId, Long currentUserId);
 }

@@ -19,7 +19,7 @@ import com.morago.backend.exception.password.WrongOldPasswordException;
 import com.morago.backend.mapper.UserMapper;
 import com.morago.backend.repository.RefreshTokenRepository;
 import com.morago.backend.repository.UserRepository;
-import com.morago.backend.service.RoleService;
+import com.morago.backend.service.role.RoleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
@@ -195,27 +195,32 @@ public class UserServiceImpl implements UserService {
     }
 
 
-    @Override
     @Transactional
     public void changePassword(Long userId, ChangePasswordRequestDto dto) {
         User user = findByIdOrThrow(userId);
 
         boolean isAdmin = currentUserIsAdmin();
-
         if (!isAdmin) {
             if (dto.getCurrentPassword() == null || dto.getCurrentPassword().isBlank()) {
                 throw new WrongOldPasswordException();
             }
             if (!passwordEncoder.matches(dto.getCurrentPassword(), user.getPassword())) {
-                throw new WrongOldPasswordException();
+                throw new  WrongOldPasswordException();
             }
         }
+        applyNewPassword(user, dto.getNewPassword(), dto.getConfirmPassword());
+    }
 
-        ensureValidNewPassword(dto.getNewPassword(), dto.getConfirmPassword());
+    @Transactional
+    public void setPasswordWithoutOldCheck(Long userId, String newPassword, String confirmPassword) {
+        User user = findByIdOrThrow(userId);
+        applyNewPassword(user, newPassword, confirmPassword);
+    }
 
-        user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+    private void applyNewPassword(User user, String newPassword, String confirmPassword) {
+        ensureValidNewPassword(newPassword, confirmPassword);
+        user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
-
         refreshTokenRepository.deleteByUser(user);
     }
 
