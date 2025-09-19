@@ -25,20 +25,25 @@ import lombok.Setter;
 @Builder
 public class PasswordReset extends Auditable {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name ="token", unique = true)
+    @Column(name ="token", unique = true, nullable = false, length = 64)
     private String token;
 
-    @Column(name ="phone", length = 100)
+    @Column(name ="phone", length = 100, nullable = false)
     private String phone;
 
-    @Column(name ="reset_code")
+    @Column(name ="reset_code", nullable = false)
     private Integer resetCode;
+
+    @Column(name = "expires_at", nullable = false)
+    private java.time.LocalDateTime expiresAt;
+
+    @Column(name = "used", nullable = false)
+    private Boolean used = false;
 }

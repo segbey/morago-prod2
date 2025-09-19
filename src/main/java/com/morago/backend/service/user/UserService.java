@@ -25,7 +25,7 @@ public interface UserService {
     //for 'me'
     UserUpdateProfileResponseDto updateMyProfile(UserUpdateProfileRequestDto dto);
     void changeMyPassword(ChangePasswordRequestDto dto);
-
+    void setPasswordWithoutOldCheck(Long userId, String newPassword, String confirmPassword);
 
     UserRegistrationResponseDto createUser(UserRegistrationRequestDto dto);
     void deleteUser(Long id);

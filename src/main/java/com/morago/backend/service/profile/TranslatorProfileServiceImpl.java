@@ -6,6 +6,7 @@ import com.morago.backend.entity.Theme;
 import com.morago.backend.entity.TranslatorProfile;
 import com.morago.backend.entity.User;
 import com.morago.backend.exception.ResourceNotFoundException;
+import com.morago.backend.exception.rating.SelfRatingNotAllowedException;
 import com.morago.backend.mapper.TranslatorProfileMapper;
 import com.morago.backend.repository.LanguageRepository;
 import com.morago.backend.repository.ThemeRepository;
@@ -160,5 +161,25 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
         return profileRepo.findByLanguages_Id(languageId).stream()
                 .map(mapper::toDto)
                 .toList();
+    }
+
+    @Transactional
+    public void setOnlineStatus(User user, boolean online) {
+        profileRepo.findByUser(user).ifPresent(profile -> {
+            profile.setIsOnline(online);
+            profileRepo.save(profile);
+        });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TranslatorProfile getForRatingOrThrow(Long translatorProfileId, Long currentUserId) {
+        TranslatorProfile translator = profileRepo.findById(translatorProfileId)
+                .orElseThrow(() -> new ResourceNotFoundException("Translator not found"));
+
+        if (translator.getUser() != null && translator.getUser().getId().equals(currentUserId)) {
+            throw new SelfRatingNotAllowedException(); // 403, RATING_SELF_NOT_ALLOWED
+        }
+        return translator;
     }
 }

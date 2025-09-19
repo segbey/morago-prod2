@@ -1,4 +1,4 @@
-package com.morago.backend.service;
+package com.morago.backend.service.role;
 
 import com.morago.backend.entity.Role;
 import com.morago.backend.entity.enumFiles.Roles;

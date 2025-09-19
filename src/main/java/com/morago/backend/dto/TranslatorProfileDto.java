@@ -1,6 +1,8 @@
 package com.morago.backend.dto;
 
 import lombok.Data;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -19,4 +21,7 @@ public class TranslatorProfileDto {
     private Long userId;
     private Set<Long> languageIds;
     private Set<Long> themeIds;
+
+    private BigDecimal ratingAvg;   // 0.00..5.00 (scale=2)
+    private Integer    ratingCount;
 }

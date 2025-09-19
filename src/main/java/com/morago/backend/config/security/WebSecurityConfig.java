@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -65,7 +66,15 @@ public class WebSecurityConfig {
                         .accessDeniedHandler(restAccessDeniedHandler)           // 403
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/refresh").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/register/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/password/reset/request").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/password/reset/verify").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/password/reset/confirm").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/logout").authenticated()
+                        .requestMatchers(HttpMethod.PUT,    "/translators/*/rating").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/translators/*/rating").authenticated()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/translators/**").hasAnyRole("TRANSLATOR", "ADMIN", "USER")
 
