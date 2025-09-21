@@ -70,7 +70,6 @@ public class WebSecurityConfig {
                 .anyMatch(p -> p.equalsIgnoreCase("local") || p.equalsIgnoreCase("dev"));
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint(restAuthenticationEntryPoint) // 401
@@ -83,6 +82,7 @@ public class WebSecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/auth/password/reset/request").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/password/reset/verify").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/password/reset/confirm").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/logout").authenticated()
                         .requestMatchers(HttpMethod.PUT,    "/translators/*/rating").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/translators/*/rating").authenticated()
@@ -98,6 +98,7 @@ public class WebSecurityConfig {
                         .requestMatchers("/translator/**", "/translators/**").hasAnyRole("TRANSLATOR", "ADMIN")
                         .anyRequest().authenticated()
                 )
+                .cors(Customizer.withDefaults())
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -126,9 +127,10 @@ public class WebSecurityConfig {
     public CorsConfigurationSource corsSource() {
         CorsConfiguration c = new CorsConfiguration();
         
-        c.setAllowedOrigins(List.of(CORS_WHITELIST));
+        c.setAllowedOrigins(Arrays.asList(CORS_WHITELIST));
         c.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         c.setAllowedHeaders(List.of("*"));
+        c.setExposedHeaders(List.of("Authorization", "Content-Disposition"));
         c.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
         src.registerCorsConfiguration("/**", c);
