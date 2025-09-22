@@ -70,6 +70,7 @@ public class WebSecurityConfig {
                 .anyMatch(p -> p.equalsIgnoreCase("local") || p.equalsIgnoreCase("dev"));
         http
                 .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsSource()))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint(restAuthenticationEntryPoint) // 401
