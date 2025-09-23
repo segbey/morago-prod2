@@ -1,5 +1,6 @@
 package com.morago.backend.dto;
 
+import com.morago.backend.dto.translator.TranslatorProfileDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

@@ -33,7 +33,7 @@ public interface ThemeMapper {
 //package com.morago.backend.mapper;
 //
 //import com.morago.backend.dto.ThemeDto;
-//import com.morago.backend.dto.TranslatorProfileDto;
+//import com.morago.backend.dto.translator.TranslatorProfileDto;
 //import com.morago.backend.entity.Category;
 //import com.morago.backend.entity.File;
 //import com.morago.backend.entity.Theme;
