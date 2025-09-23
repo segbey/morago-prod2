@@ -4,6 +4,7 @@ spring:
       max-file-size: 8MB
       max-request-size: 8MB
 
+
 app:
   storage:
     type: ${APP_STORAGE_TYPE:local}
