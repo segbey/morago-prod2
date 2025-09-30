@@ -1,5 +1,6 @@
 package com.morago.backend.controller;
 
+import com.morago.backend.dto.auth.AuthResponse;
 import com.morago.backend.dto.tokens.JWTRequest;
 import com.morago.backend.dto.tokens.JWTResponse;
 import com.morago.backend.dto.tokens.RefreshTokenRequest;
@@ -39,8 +40,7 @@ public class MainController {
 
     @Operation(
             summary = "Log in with phone and password",
-            description = "Authenticates the user and returns a JWT access token and refresh token. " +
-                    "Phone format: 01012345678",
+            description = "Authenticates the user and returns a JWT access token, refresh token, and user data.",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true,
                     content = @Content(
@@ -52,14 +52,23 @@ public class MainController {
                     )
             ),
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Successful authentication",
-                            content = @Content(schema = @Schema(implementation = JWTResponse.class))),
-                    @ApiResponse(responseCode = "400", description = "Invalid username or password")
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Successful authentication",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = AuthResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Invalid username or password"
+                    )
             }
     )
     @PostMapping("/login")
-    public ResponseEntity<JWTResponse> login(@Valid @RequestBody JWTRequest authRequest) {
-        JWTResponse response = authService.createAuthToken(authRequest);
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody JWTRequest authRequest) {
+        AuthResponse response = authService.createAuthToken(authRequest);
         return ResponseEntity.ok(response);
     }
 

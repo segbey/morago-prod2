@@ -1,9 +1,11 @@
 package com.morago.backend.service.auth;
 
 import com.morago.backend.config.utils.JWTUtils;
+import com.morago.backend.dto.auth.AuthResponse;
 import com.morago.backend.dto.tokens.JWTRequest;
-import com.morago.backend.dto.tokens.JWTResponse;
+import com.morago.backend.dto.user.UserDto;
 import com.morago.backend.entity.User;
+import com.morago.backend.mapper.UserMapper;
 import com.morago.backend.service.profile.TranslatorProfileService;
 import com.morago.backend.service.token.RefreshTokenService;
 import com.morago.backend.service.user.UserService;
@@ -22,9 +24,10 @@ public class AuthServiceImpl implements AuthService {
     private final RefreshTokenService refreshTokenService;
     private final UserService userService;
     private final TranslatorProfileService translatorProfileService;
+    private final UserMapper userMapper;
 
     @Override
-    public JWTResponse createAuthToken(JWTRequest authRequest) {
+    public AuthResponse createAuthToken(JWTRequest authRequest) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         authRequest.getUsername(),
@@ -42,6 +45,12 @@ public class AuthServiceImpl implements AuthService {
         User user = userService.findByUsernameOrThrow(authRequest.getUsername());
         translatorProfileService.setOnlineStatus(user, true);
 
-        return new JWTResponse(accessToken, refreshToken);
+        UserDto userDto = userMapper.toDto(user);
+
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .user(userDto)
+                .build();
     }
 }
