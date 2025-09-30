@@ -1,7 +1,9 @@
 package com.morago.backend.entity;
 
+import com.morago.backend.config.jpa.BigDecimalScale2Converter;
 import com.morago.backend.listener.Auditable;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -13,7 +15,10 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,6 +26,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Set;
 
@@ -49,8 +56,9 @@ public class TranslatorProfile extends Auditable {
     @Builder.Default
     private Boolean isVerified = false;
 
-    @Column(name = "is_online")
-    private Boolean isOnline;
+    @Column(name = "is_online", nullable = false)
+    @Builder.Default
+    private Boolean isOnline = false;
 
     @Column(name = "level_of_korean", length = 200)
     private String levelOfKorean;
@@ -79,9 +87,13 @@ public class TranslatorProfile extends Auditable {
     @Builder.Default
     private Set<Theme> themes = new java.util.HashSet<>();
 
-    @Column(name = "rating_avg", nullable = false)
+    @Column(name = "rating_avg", precision = 3, scale = 2, nullable = false)
+    @Convert(converter = BigDecimalScale2Converter.class)
+    @DecimalMin("0.00")
+    @DecimalMax("5.00")
+    @NotNull
     @Builder.Default
-    private java.math.BigDecimal ratingAvg = java.math.BigDecimal.ZERO; // 0.00..5.00
+    private BigDecimal ratingAvg = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP); // 0.00..5.00
 
     @Column(name = "rating_count", nullable = false)
     @Builder.Default

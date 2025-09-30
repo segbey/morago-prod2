@@ -3,6 +3,7 @@ package com.morago.backend.service.profile;
 import com.morago.backend.dto.TranslatorProfileDto;
 import com.morago.backend.entity.TranslatorProfile;
 import com.morago.backend.entity.User;
+import io.micrometer.common.lang.Nullable;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 
@@ -30,4 +31,12 @@ public interface TranslatorProfileService {
 
     void setOnlineStatus(User user, boolean b);
     TranslatorProfile getForRatingOrThrow(Long translatorProfileId, Long currentUserId);
+
+    Page<TranslatorProfileDto> searchTranslators(
+            List<Long> languageIds,
+            @Nullable Long themeId,
+            @Nullable Boolean online,
+            @Nullable Boolean verified,
+            Pageable pageable
+    );
 }
