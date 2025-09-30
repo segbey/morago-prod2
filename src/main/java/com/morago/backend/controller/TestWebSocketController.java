@@ -1,7 +1,5 @@
 package com.morago.backend.controller;
 
-
-
 import com.morago.backend.dto.tokens.NotificationMessage;
 import com.morago.backend.dto.tokens.CallSignalMessage;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,8 +15,6 @@ public class TestWebSocketController {
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
-
-
             /* Send a test notification to a specific user
             * GET http://localhost:8080/api/test/notification/user123?message=Hello User!*/
     @GetMapping("/notification/{userId}")

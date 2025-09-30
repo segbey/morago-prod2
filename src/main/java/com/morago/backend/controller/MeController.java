@@ -30,7 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/me")
 @RequiredArgsConstructor
-@Tag(name = "Me", description = "Endpoints for managing the current user's profile")
+@Tag(name = "Me", description = "Manage current user's profile. Access: [USER, TRANSLATOR, ADMIN]")
 public class MeController {
 
     private final UserService userService;

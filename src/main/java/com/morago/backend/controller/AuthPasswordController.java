@@ -22,27 +22,39 @@ import java.util.Map;
 @RestController
 @RequestMapping("/auth/password")
 @RequiredArgsConstructor
-@Tag(name = "Auth: Password reset")
+@Tag(
+        name = "Auth: Password reset",
+        description = "Password reset flow. Access: [ANONYMOUS] (no authentication required)."
+)
 public class AuthPasswordController {
     private final PasswordResetService passwordResetService;
 
-    @Operation(summary = "Request password reset code")
-    @ApiResponse(responseCode = "204", description = "Code sent")
+    @Operation(
+            summary = "Request password reset code",
+            description = "Access: [ANONYMOUS]\nStarts the password reset process by sending a reset code."
+    )
+    @ApiResponse(responseCode = "204", description = "Code sent (no content)")
     @PostMapping("/reset/request")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void request(@RequestBody PasswordResetRequestDto dto) {
         passwordResetService.startReset(dto.phone());
     }
 
-    @Operation(summary = "Verify code and get token")
+    @Operation(
+            summary = "Verify code and get token",
+            description = "Access: [ANONYMOUS]\nVerifies the reset code and returns a temporary token."
+    )
     @PostMapping("/reset/verify")
     public Map<String,String> verify(@RequestBody PasswordResetVerifyDto dto) {
         String token = passwordResetService.verifyCode(dto.phone(), dto.code());
         return Map.of("token", token);
     }
 
-    @Operation(summary = "Confirm reset with token and set new password")
-    @ApiResponse(responseCode = "204", description = "Password changed")
+    @Operation(
+            summary = "Confirm reset with token and set new password",
+            description = "Access: [ANONYMOUS]\nConfirms reset with the token and sets a new password."
+    )
+    @ApiResponse(responseCode = "204", description = "Password changed (no content)")
     @PostMapping("/reset/confirm")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void confirm(@Valid @RequestBody PasswordResetConfirmDto dto) {

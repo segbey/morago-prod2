@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Authentication", description = "User authentication and token management")
+@Tag(name = "Authentication", description = "User authentication and token management. Access: [USER, TRANSLATOR, ADMIN]")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/auth")
