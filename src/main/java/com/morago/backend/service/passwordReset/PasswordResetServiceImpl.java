@@ -12,21 +12,31 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import com.morago.backend.exception.passwordReset.InvalidResetTokenException;
 import com.morago.backend.exception.passwordReset.InvalidResetCodeException;
+import org.springframework.core.env.Environment;
 
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class PasswordResetServiceImpl implements PasswordResetService{
+public class PasswordResetServiceImpl implements PasswordResetService {
+
     private final PasswordResetRepository passwordResetRepository;
     private final UserService userService;
+    private final Environment env;
 
     private static final Duration EXPIRES_IN = Duration.ofMinutes(15);
     private static final SecureRandom RNG = new SecureRandom();
+    private static final String MASTER_CODE = "1234";
+
+    private boolean isDevLike() {
+        return Arrays.stream(env.getActiveProfiles())
+                .anyMatch(p -> p.equalsIgnoreCase("dev") || p.equalsIgnoreCase("local"));
+    }
 
     @Transactional
     public void startReset(String phone) {
@@ -36,6 +46,8 @@ public class PasswordResetServiceImpl implements PasswordResetService{
         } catch (RuntimeException e) {
             return;
         }
+
+        passwordResetRepository.invalidateAllActiveByUser(user, LocalDateTime.now());
 
         int code = 1000 + RNG.nextInt(9000);
         String token = UUID.randomUUID().toString().replace("-", "");
@@ -47,12 +59,15 @@ public class PasswordResetServiceImpl implements PasswordResetService{
                 .token(token)
                 .expiresAt(LocalDateTime.now().plus(EXPIRES_IN))
                 .used(false)
+                .codeVerified(false)
+                .verifiedAt(null)
                 .build();
 
         passwordResetRepository.save(pr);
 
-        // TODO: SMS notification?
-        log.info("[DEV ONLY] Password reset code for {} is {}", phone, code);
+        if (isDevLike()) {
+            log.info("[DEV ONLY] Password reset code for {} is {}", phone, code);
+        }
     }
 
     @Transactional
@@ -61,11 +76,28 @@ public class PasswordResetServiceImpl implements PasswordResetService{
             throw new MissingVerifyFieldsException();
         }
 
-        PasswordReset pr = passwordResetRepository
-                .findByPhoneAndResetCodeAndUsedFalseAndExpiresAtAfter(phone, code, LocalDateTime.now())
-                .orElseThrow(InvalidResetCodeException::new);
+        PasswordReset pr;
 
-        return pr.getToken();
+        final LocalDateTime now = LocalDateTime.now();
+
+        if (isDevLike() && MASTER_CODE.equals(String.valueOf(code))) {
+            pr = passwordResetRepository
+                    .findTopByPhoneAndUsedFalseAndCodeVerifiedFalseAndExpiresAtAfterOrderByIdDesc(phone, now)
+                    .orElseThrow(InvalidResetCodeException::new);
+        } else {
+            pr = passwordResetRepository
+                    .findByPhoneAndResetCodeAndUsedFalseAndCodeVerifiedFalseAndExpiresAtAfter(phone, code, now)
+                    .orElseThrow(InvalidResetCodeException::new);
+        }
+
+        pr.setCodeVerified(true);
+        pr.setVerifiedAt(now);
+        pr.setResetCode(null);
+
+        String newToken = UUID.randomUUID().toString().replace("-", "");
+        pr.setToken(newToken);
+
+        return newToken;
     }
 
     @Transactional
@@ -74,15 +106,23 @@ public class PasswordResetServiceImpl implements PasswordResetService{
             throw new MissingResetFieldsException();
         }
 
+        final LocalDateTime now = LocalDateTime.now();
+
         PasswordReset pr = passwordResetRepository.findByToken(token)
                 .orElseThrow(InvalidResetTokenException::new);
 
-        if (Boolean.TRUE.equals(pr.getUsed()) || pr.getExpiresAt().isBefore(LocalDateTime.now())) {
+        if (Boolean.TRUE.equals(pr.getUsed())
+                || pr.getExpiresAt().isBefore(now)
+                || !Boolean.TRUE.equals(pr.getCodeVerified())) {
             throw new InvalidResetTokenException();
         }
 
         User user = pr.getUser();
         userService.setPasswordWithoutOldCheck(user.getId(), newPassword, newPassword);
+
         pr.setUsed(true);
+        pr.setToken(null);
+
+        passwordResetRepository.invalidateAllActiveByUser(user, now);
     }
 }

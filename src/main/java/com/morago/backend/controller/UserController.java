@@ -1,6 +1,6 @@
 package com.morago.backend.controller;
 
-import com.morago.backend.dto.TranslatorProfileDto;
+import com.morago.backend.dto.translator.TranslatorProfileDto;
 import com.morago.backend.service.profile.TranslatorProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
