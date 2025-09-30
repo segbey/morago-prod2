@@ -1,8 +1,8 @@
 package com.morago.backend.service.auth;
 
+import com.morago.backend.dto.auth.AuthResponse;
 import com.morago.backend.dto.tokens.JWTRequest;
-import com.morago.backend.dto.tokens.JWTResponse;
 
 public interface AuthService {
-    JWTResponse createAuthToken(JWTRequest authRequest);
+    AuthResponse createAuthToken(JWTRequest authRequest);
 }
