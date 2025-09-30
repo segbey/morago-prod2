@@ -4,6 +4,10 @@ spring:
       max-file-size: 8MB
       max-request-size: 8MB
 
+server:
+  tomcat:
+    max-http-form-post-size: 16KB
+    max-swallow-size: 0
 
 app:
   storage:
