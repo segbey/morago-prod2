@@ -16,6 +16,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "password_resets")
 @Getter
@@ -32,13 +34,13 @@ public class PasswordReset extends Auditable {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name ="token", unique = true, nullable = false, length = 64)
+    @Column(name ="token", unique = true, nullable = true, length = 64)
     private String token;
 
     @Column(name ="phone", length = 100, nullable = false)
     private String phone;
 
-    @Column(name ="reset_code", nullable = false)
+    @Column(name ="reset_code", nullable = true)
     private Integer resetCode;
 
     @Column(name = "expires_at", nullable = false)
@@ -46,4 +48,11 @@ public class PasswordReset extends Auditable {
 
     @Column(name = "used", nullable = false)
     private Boolean used = false;
+
+    @Column(name = "code_verified", nullable = false)
+    @Builder.Default
+    private Boolean codeVerified = false;
+
+    @Column(name = "verified_at")
+    private LocalDateTime verifiedAt;
 }
