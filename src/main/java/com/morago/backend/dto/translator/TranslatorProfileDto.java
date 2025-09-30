@@ -1,4 +1,4 @@
-package com.morago.backend.dto;
+package com.morago.backend.dto.translator;
 
 import lombok.Data;
 
@@ -17,8 +17,12 @@ public class TranslatorProfileDto {
     private Boolean isOnline;
     private String levelOfKorean;
     private LocalDateTime updatedAt;
+    private String avatarUrl;
+
+
 
     private Long userId;
+
     private Set<Long> languageIds;
     private Set<Long> themeIds;
 

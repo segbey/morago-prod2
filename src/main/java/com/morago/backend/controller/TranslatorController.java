@@ -1,10 +1,12 @@
 package com.morago.backend.controller;
 
-import com.morago.backend.dto.TranslatorProfileDto;
+import com.morago.backend.dto.translator.TranslatorProfileDto;
+import com.morago.backend.dto.user.UserUpdateProfileRequestDto;
+import com.morago.backend.dto.user.UserUpdateProfileResponseDto;
 import com.morago.backend.service.profile.TranslatorProfileService;
+import com.morago.backend.service.user.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,6 +23,7 @@ import java.util.List;
 public class TranslatorController {
 
     private final TranslatorProfileService translatorProfileService;
+    private final UserService userService;
 
     @Operation(
             summary = "Get all translators",
@@ -90,54 +93,21 @@ public class TranslatorController {
     }
 
     @Operation(
-            summary = "Update translator profile",
-            description = "Update a translator's profile. Admin or translator themselves only.",
+            summary = "Update my profile",
+            description = "Update currently logged-in user's profile. Accessible to USER, TRANSLATOR, and ADMIN.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Profile updated successfully"),
                     @ApiResponse(responseCode = "400", description = "Invalid request data"),
-                    @ApiResponse(responseCode = "403", description = "Forbidden"),
-                    @ApiResponse(responseCode = "404", description = "Translator not found")
+                    @ApiResponse(responseCode = "403", description = "Forbidden")
             }
     )
-    @PatchMapping("/{id}/profile")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<TranslatorProfileDto> updateProfile(
-            @PathVariable Long id,
-            @Valid @RequestBody TranslatorProfileDto dto
+    @PutMapping("/me")
+    @PreAuthorize("hasAnyRole('USER','TRANSLATOR','ADMIN')")
+    public ResponseEntity<UserUpdateProfileResponseDto> updateMyProfile(
+            @Valid @RequestBody UserUpdateProfileRequestDto dto
     ) {
-        return ResponseEntity.ok(translatorProfileService.update(id, dto));
+        return ResponseEntity.ok(userService.updateMyProfile(dto));
     }
 
-    @Operation(
-            summary = "Verify translator",
-            description = "Verify a translator's credentials. Admin only.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Translator verified successfully"),
-                    @ApiResponse(responseCode = "403", description = "Forbidden - Admin access required"),
-                    @ApiResponse(responseCode = "404", description = "Translator not found")
-            }
-    )
-    @PatchMapping("/{id}/verify")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<TranslatorProfileDto> verifyTranslator(@PathVariable Long id) {
-        TranslatorProfileDto translator = translatorProfileService.getById(id);
-        translator.setIsVerified(true);
-        return ResponseEntity.ok(translatorProfileService.update(id, translator));
-    }
 
-    @Operation(
-            summary = "Delete translator",
-            description = "Delete a translator profile. Admin only.",
-            responses = {
-                    @ApiResponse(responseCode = "204", description = "Translator deleted successfully"),
-                    @ApiResponse(responseCode = "403", description = "Forbidden - Admin access required"),
-                    @ApiResponse(responseCode = "404", description = "Translator not found")
-            }
-    )
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteTranslator(@PathVariable Long id) {
-        translatorProfileService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
 }

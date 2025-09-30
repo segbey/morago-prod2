@@ -1,6 +1,6 @@
 package com.morago.backend.service.profile;
 
-import com.morago.backend.dto.TranslatorProfileDto;
+import com.morago.backend.dto.translator.TranslatorProfileDto;
 import com.morago.backend.entity.Language;
 import com.morago.backend.entity.Theme;
 import com.morago.backend.entity.TranslatorProfile;
@@ -88,46 +88,6 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
         return profileRepo.findByUserId(userId)
                 .map(mapper::toDto)
                 .orElseThrow(() -> new ResourceNotFoundException("Translator profile not found for user: " + userId));
-    }
-
-    @Override
-    public TranslatorProfileDto update(Long id, TranslatorProfileDto dto) {
-        TranslatorProfile profile = profileRepo.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
-
-        profile.setEmail(dto.getEmail());
-        profile.setDateOfBirth(dto.getDateOfBirth());
-        profile.setIsOnline(dto.getIsOnline());
-        profile.setLevelOfKorean(dto.getLevelOfKorean());
-
-        if (dto.getIsVerified() != null) {
-            profile.setIsVerified(dto.getIsVerified());
-        }
-
-        if (dto.getLanguageIds() != null) {
-            Set<Language> languages = dto.getLanguageIds().stream()
-                    .map(lid -> languageRepo.findById(lid)
-                            .orElseThrow(() -> new ResourceNotFoundException("Language not found: " + lid)))
-                    .collect(Collectors.toSet());
-            profile.setLanguages(languages);
-        }
-
-        if (dto.getThemeIds() != null) {
-            Set<Theme> themes = dto.getThemeIds().stream()
-                    .map(tid -> themeRepo.findById(tid)
-                            .orElseThrow(() -> new ResourceNotFoundException("Theme not found: " + tid)))
-                    .collect(Collectors.toSet());
-            profile.setThemes(themes);
-        }
-
-        return mapper.toDto(profileRepo.save(profile));
-    }
-
-    @Override
-    public void delete(Long id) {
-        TranslatorProfile profile = profileRepo.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
-        profileRepo.delete(profile);
     }
 
     @Override

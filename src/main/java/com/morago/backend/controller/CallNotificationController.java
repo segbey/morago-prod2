@@ -62,28 +62,4 @@ public class CallNotificationController {
 
         callNotificationService.handleWebRTCSignal(signal);
     }
-
-    @MessageMapping("/webrtc.offer")
-    public void handleWebRTCOffer(@Payload WebRTCSignalMessage signal,
-                                  SimpMessageHeaderAccessor headerAccessor) {
-        signal.setType("OFFER");
-        signal.setTimestamp(LocalDateTime.now());
-        callNotificationService.handleWebRTCSignal(signal);
-    }
-
-    @MessageMapping("/webrtc.answer")
-    public void handleWebRTCAnswer(@Payload WebRTCSignalMessage signal,
-                                   SimpMessageHeaderAccessor headerAccessor) {
-        signal.setType("ANSWER");
-        signal.setTimestamp(LocalDateTime.now());
-        callNotificationService.handleWebRTCSignal(signal);
-    }
-
-    @MessageMapping("/webrtc.ice-candidate")
-    public void handleICECandidate(@Payload WebRTCSignalMessage signal,
-                                   SimpMessageHeaderAccessor headerAccessor) {
-        signal.setType("ICE_CANDIDATE");
-        signal.setTimestamp(LocalDateTime.now());
-        callNotificationService.handleWebRTCSignal(signal);
-    }
 }

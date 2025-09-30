@@ -77,10 +77,7 @@
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-websocket</artifactId>
-        </dependency>
+
 
 		<!-- JWT (0.12.6) -->
 		<dependency>
@@ -177,6 +174,17 @@
 					</excludes>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>org.flywaydb</groupId>
+				<artifactId>flyway-maven-plugin</artifactId>
+				<version>11.7.2</version>
+				<configuration>
+					<url>jdbc:mysql://localhost:3306/morago</url>
+					<user>root</user>
+					<password>root</password>
+				</configuration>
+			</plugin>
+
 		</plugins>
 	</build>
 
