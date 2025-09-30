@@ -1,0 +1,2 @@
+ALTER TABLE translator_profiles
+    MODIFY COLUMN is_online    BOOLEAN NOT NULL DEFAULT FALSE

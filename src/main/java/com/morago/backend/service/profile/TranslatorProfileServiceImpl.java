@@ -12,9 +12,12 @@ import com.morago.backend.repository.LanguageRepository;
 import com.morago.backend.repository.ThemeRepository;
 import com.morago.backend.repository.TranslatorProfileRepository;
 import com.morago.backend.repository.UserRepository;
+import io.micrometer.common.lang.Nullable;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +35,8 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
     private final LanguageRepository languageRepo;
     private final ThemeRepository themeRepo;
     private final TranslatorProfileMapper mapper;
+    private static final Set<String> ALLOWED_SORTS =
+            Set.of("id", "ratingAvg", "ratingCount", "createdAt");
 
     @Override
     public TranslatorProfileDto create(TranslatorProfileDto dto) {
@@ -141,5 +146,42 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
             throw new SelfRatingNotAllowedException(); // 403, RATING_SELF_NOT_ALLOWED
         }
         return translator;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<TranslatorProfileDto> searchTranslators(
+            List<Long> languageIds,
+            @Nullable Long themeId,
+            @Nullable Boolean online,
+            @Nullable Boolean verified,
+            Pageable pageable
+    ) {
+        if (languageIds == null || languageIds.isEmpty()) {
+            return Page.empty(pageable);
+        }
+        long required = languageIds.stream().distinct().count();
+
+        Pageable safe = sanitize(pageable);
+
+        return profileRepo.searchByLanguagesThemeAndFlags(
+                        languageIds, themeId, online, verified, required, safe)
+                .map(mapper::toDto);
+    }
+
+    private Pageable sanitize(Pageable p) {
+        Sort safeSort = (p.getSort() == null || p.getSort().isUnsorted())
+                ? Sort.by(Sort.Order.desc("ratingAvg"), Sort.Order.desc("ratingCount"))
+                : Sort.by(
+                p.getSort().stream()
+                        .filter(o -> ALLOWED_SORTS.contains(o.getProperty()))
+                        .map(o -> new Sort.Order(o.getDirection(), o.getProperty()))
+                        .toList()
+        );
+
+        if (safeSort.isUnsorted()) {
+            safeSort = Sort.by(Sort.Order.desc("ratingAvg"), Sort.Order.desc("ratingCount"));
+        }
+        return PageRequest.of(p.getPageNumber(), p.getPageSize(), safeSort);
     }
 }

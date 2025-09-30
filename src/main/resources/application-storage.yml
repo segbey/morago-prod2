@@ -15,3 +15,6 @@ app:
       bucket: ${APP_STORAGE_S3_BUCKET:morago-files}
       region: ${APP_STORAGE_S3_REGION:ap-northeast-2}
       key-prefix: ${APP_STORAGE_S3_KEY_PREFIX:uploads}
+
+springdoc:
+  packages-to-scan: com.morago.backend.controller
