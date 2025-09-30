@@ -2,6 +2,7 @@ package com.morago.backend.controller;
 
 import com.morago.backend.dto.translator.TranslatorProfileDto;
 import com.morago.backend.service.profile.TranslatorProfileService;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -21,10 +22,17 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
-@Tag(name = "Users", description = "User management")
+@Tag(
+        name = "Users",
+        description = "User management. Access: [USER] (search for translators)."
+)
 public class UserController {
     private final TranslatorProfileService service;
 
+    @Operation(
+            summary = "Search translators",
+            description = "Access: [USER]\nSearch for translators by language, theme, online/verified status, with sorting and pagination."
+    )
     @GetMapping("/translators")
     public Page<TranslatorProfileDto> searchTranslators(
             @RequestParam List<Long> languageIds,
