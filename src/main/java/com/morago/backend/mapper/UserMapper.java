@@ -1,5 +1,6 @@
 package com.morago.backend.mapper;
 
+import com.morago.backend.dto.user.UserDto;
 import com.morago.backend.dto.user.UserRegistrationRequestDto;
 import com.morago.backend.dto.user.UserRegistrationResponseDto;
 import com.morago.backend.dto.user.UserUpdateProfileResponseDto;
@@ -24,4 +25,10 @@ public interface UserMapper {
     UserRegistrationResponseDto toResponseDto(User user);
 
     UserUpdateProfileResponseDto toUpdateProfileResponseDto(User user);
+
+    @Mapping(target = "roles", expression = "java(user.getRoles().stream()"
+            + ".map(r -> r.getName().name())"
+            + ".collect(java.util.stream.Collectors.toList()))")
+    @Mapping(target = "available", expression = "java(user.getAvailable())")
+    UserDto toDto(User user);
 }

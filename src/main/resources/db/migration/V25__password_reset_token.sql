@@ -1,0 +1,2 @@
+ALTER TABLE password_resets
+  MODIFY COLUMN token VARCHAR(64) NULL;
