@@ -88,7 +88,18 @@ public class Call extends Auditable {
     @Builder.Default
     private boolean endCall = false;
 
-    public boolean isEndCall() { return endCall; }      // опционально, если нужно именно такой геттер
-    public void setEndCall(boolean v) { this.endCall = v; }
+    public boolean isEndCall() {
+        return endCall;
+    }      // опционально, если нужно именно такой геттер
+
+    public void setEndCall(boolean v) {
+        this.endCall = v;
+    }
+
+    public boolean getTranslatorHasJoined() {
+        return translatorHasJoined;
+    }
 }
+
+
 

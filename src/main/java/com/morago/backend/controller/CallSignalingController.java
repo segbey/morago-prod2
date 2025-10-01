@@ -1,118 +1,125 @@
 package com.morago.backend.controller;
 
-import com.morago.backend.dto.tokens.CallSignalMessage;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.messaging.handler.annotation.DestinationVariable;
+import com.morago.backend.dto.call.CallActionRequest;
+import com.morago.backend.dto.tokens.CallNotificationMessage;
+import com.morago.backend.dto.tokens.WebRTCSignalMessage;
+import com.morago.backend.service.call.CallAccessService;
+import com.morago.backend.service.call.CallService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
-import java.time.LocalDateTime;
+
+import java.security.Principal;
 
 @Controller
+@RequiredArgsConstructor
+@Slf4j
 public class CallSignalingController {
 
-    @Autowired
-    private SimpMessagingTemplate messagingTemplate;
+    private final CallAccessService callAccessService;
+    private final CallService callService;
+    private final SimpMessagingTemplate messagingTemplate;
 
-
-    @MessageMapping("/call.initiate")
-    public void initiateCall(@Payload CallSignalMessage callMessage,
-                             SimpMessageHeaderAccessor headerAccessor) {
-
-        String caller = headerAccessor.getUser() != null ?
-                headerAccessor.getUser().getName() : callMessage.getCallerId();
-
-        callMessage.setCallerId(caller);
-        callMessage.setTimestamp(LocalDateTime.now());
-        callMessage.setType("CALL_INITIATE");
-
+    @MessageMapping("/webrtc.offer")
+    public void handleOffer(@Payload WebRTCSignalMessage message, Principal principal) {
+        log.info("Received OFFER for call {} from {}", message.getCallId(), principal.getName());
+        callAccessService.validateTargetUser(
+                message.getCallId(),
+                message.getFromUserId(),
+                message.getToUserId(),
+                principal
+        );
         messagingTemplate.convertAndSendToUser(
-                callMessage.getRecipientId(),
-                "/queue/calls",
-                callMessage
+                message.getToUserId(),
+                "/queue/webrtc-signals",
+                message
+        );
+        log.info("Forwarded OFFER to user {}", message.getToUserId());
+    }
+
+    @MessageMapping("/webrtc.answer")
+    public void handleAnswer(@Payload WebRTCSignalMessage message, Principal principal) {
+        log.info("Received ANSWER for call {} from {}", message.getCallId(), principal.getName());
+        callAccessService.validateTargetUser(
+                message.getCallId(),
+                message.getFromUserId(),
+                message.getToUserId(),
+                principal
+        );
+        messagingTemplate.convertAndSendToUser(
+                message.getToUserId(),
+                "/queue/webrtc-signals",
+                message
+        );
+        log.info("Forwarded ANSWER to user {}", message.getToUserId());
+    }
+
+    @MessageMapping("/webrtc.ice")
+    public void handleIceCandidate(@Payload WebRTCSignalMessage message, Principal principal) {
+        log.debug("Received ICE candidate for call {} from {}", message.getCallId(), principal.getName());
+        callAccessService.validateTargetUser(
+                message.getCallId(),
+                message.getFromUserId(),
+                message.getToUserId(),
+                principal
+        );
+        messagingTemplate.convertAndSendToUser(
+                message.getToUserId(),
+                "/queue/webrtc-signals",
+                message
         );
     }
 
     @MessageMapping("/call.accept")
-    public void acceptCall(@Payload CallSignalMessage callMessage,
-                           SimpMessageHeaderAccessor headerAccessor) {
+    public void acceptCall(@Payload CallActionRequest request, Principal principal) {
+        log.info("Call {} accepted by {}", request.getCallId(), principal.getName());
+        callAccessService.validateCallAccess(request.getCallId(), principal);
 
-        callMessage.setType("CALL_ACCEPTED");
-        callMessage.setTimestamp(LocalDateTime.now());
+        // Instead of callService.acceptCall → just notify both parties
+        String otherUser = callAccessService.getOtherParticipant(request.getCallId(), principal);
 
-        messagingTemplate.convertAndSendToUser(
-                callMessage.getCallerId(),
-                "/queue/calls",
-                callMessage
-        );
+        CallNotificationMessage notification = CallNotificationMessage.builder()
+                .type("CALL_ACCEPTED")
+                .callId(request.getCallId().toString())
+                .build();
 
-        messagingTemplate.convertAndSend(
-                "/topic/call-room/" + callMessage.getCallId(),
-                callMessage
-        );
+        messagingTemplate.convertAndSendToUser(otherUser, "/queue/call-notifications", notification);
+        messagingTemplate.convertAndSendToUser(principal.getName(), "/queue/call-notifications", notification);
     }
 
-
     @MessageMapping("/call.reject")
-    public void rejectCall(@Payload CallSignalMessage callMessage,
-                           SimpMessageHeaderAccessor headerAccessor) {
+    public void rejectCall(@Payload CallActionRequest request, Principal principal) {
+        log.info("Call {} rejected by {}", request.getCallId(), principal.getName());
 
-        callMessage.setType("CALL_REJECTED");
-        callMessage.setTimestamp(LocalDateTime.now());
+        callAccessService.validateCallAccess(request.getCallId(), principal);
 
-        messagingTemplate.convertAndSendToUser(
-                callMessage.getCallerId(),
-                "/queue/calls",
-                callMessage
-        );
+        String otherUser = callAccessService.getOtherParticipant(request.getCallId(), principal);
+
+        CallNotificationMessage notification = CallNotificationMessage.builder()
+                .type("CALL_REJECTED")
+                .callId(request.getCallId().toString())
+                .build();
+
+        messagingTemplate.convertAndSendToUser(otherUser, "/queue/call-notifications", notification);
     }
 
 
     @MessageMapping("/call.end")
-    public void endCall(@Payload CallSignalMessage callMessage,
-                        SimpMessageHeaderAccessor headerAccessor) {
+    public void endCall(@Payload CallActionRequest request, Principal principal) {
+        log.info("Call {} ended by {}", request.getCallId(), principal.getName());
+        callAccessService.validateCallAccess(request.getCallId(), principal);
 
-        callMessage.setType("CALL_ENDED");
-        callMessage.setTimestamp(LocalDateTime.now());
+        String otherUser = callAccessService.getOtherParticipant(request.getCallId(), principal);
 
-        messagingTemplate.convertAndSend(
-                "/topic/call-room/" + callMessage.getCallId(),
-                callMessage
-        );
-    }
+        CallNotificationMessage notification = CallNotificationMessage.builder()
+                .type("CALL_ENDED")
+                .callId(request.getCallId().toString())
+                .build();
 
-
-    @MessageMapping("/call.signal/{callId}")
-    public void handleSignaling(@DestinationVariable String callId,
-                                @Payload CallSignalMessage signalMessage,
-                                SimpMessageHeaderAccessor headerAccessor) {
-
-        signalMessage.setCallId(callId);
-        signalMessage.setTimestamp(LocalDateTime.now());
-
-        messagingTemplate.convertAndSend(
-                "/topic/call-room/" + callId,
-                signalMessage
-        );
-    }
-
-
-    @MessageMapping("/call.translator.join")
-    public void translatorJoin(@Payload CallSignalMessage callMessage,
-                               SimpMessageHeaderAccessor headerAccessor) {
-
-        String translatorId = headerAccessor.getUser() != null ?
-                headerAccessor.getUser().getName() : callMessage.getTranslatorId();
-
-        callMessage.setTranslatorId(translatorId);
-        callMessage.setType("TRANSLATOR_JOINED");
-        callMessage.setTimestamp(LocalDateTime.now());
-
-        messagingTemplate.convertAndSend(
-                "/topic/call-room/" + callMessage.getCallId(),
-                callMessage
-        );
+        messagingTemplate.convertAndSendToUser(otherUser, "/queue/call-notifications", notification);
+        messagingTemplate.convertAndSendToUser(principal.getName(), "/queue/call-notifications", notification);
     }
 }

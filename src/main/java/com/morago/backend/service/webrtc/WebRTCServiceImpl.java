@@ -33,10 +33,9 @@ public class WebRTCServiceImpl implements WebRTCService {
         activePeerConnections.put(connectionKey, connectionData);
 
         WebRTCSignalMessage initMessage = WebRTCSignalMessage.builder()
-                .callId(callId)
+                .callId(Long.valueOf(callId))
                 .fromUserId(userId)
                 .type("PEER_INITIALIZED")
-                .timestamp(LocalDateTime.now())
                 .build();
 
         messagingTemplate.convertAndSend("/topic/webrtc-room/" + callId, initMessage);
@@ -48,7 +47,6 @@ public class WebRTCServiceImpl implements WebRTCService {
                 signal.getFromUserId(), signal.getToUserId(), signal.getCallId());
 
         signal.setType("OFFER");
-        signal.setTimestamp(LocalDateTime.now());
 
         if (signal.getToUserId() != null) {
             messagingTemplate.convertAndSendToUser(
@@ -70,8 +68,6 @@ public class WebRTCServiceImpl implements WebRTCService {
                 signal.getFromUserId(), signal.getToUserId(), signal.getCallId());
 
         signal.setType("ANSWER");
-        signal.setTimestamp(LocalDateTime.now());
-
         if (signal.getToUserId() != null) {
             messagingTemplate.convertAndSendToUser(
                     signal.getToUserId(),
@@ -92,7 +88,6 @@ public class WebRTCServiceImpl implements WebRTCService {
                 signal.getFromUserId(), signal.getCallId());
 
         signal.setType("ICE_CANDIDATE");
-        signal.setTimestamp(LocalDateTime.now());
 
         if (signal.getToUserId() != null) {
             messagingTemplate.convertAndSendToUser(
@@ -116,10 +111,9 @@ public class WebRTCServiceImpl implements WebRTCService {
         activePeerConnections.remove(connectionKey);
 
         WebRTCSignalMessage closeMessage = WebRTCSignalMessage.builder()
-                .callId(callId)
+                .callId(Long.valueOf(callId))
                 .fromUserId(userId)
                 .type("PEER_DISCONNECTED")
-                .timestamp(LocalDateTime.now())
                 .build();
 
         messagingTemplate.convertAndSend("/topic/webrtc-room/" + callId, closeMessage);

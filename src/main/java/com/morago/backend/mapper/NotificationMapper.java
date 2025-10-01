@@ -14,3 +14,4 @@ public interface NotificationMapper {
     @Mapping(source = "userId", target = "user.id")
     Notification toEntity(NotificationDto dto);
 }
+

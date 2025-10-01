@@ -25,41 +25,6 @@ public class WebRTCController {
         webRTCService.initializePeerConnection(callId, userId);
     }
 
-    @MessageMapping("/webrtc.offer")
-    public void handleOffer(@Payload WebRTCSignalMessage signal,
-                            SimpMessageHeaderAccessor headerAccessor) {
-        String fromUserId = headerAccessor.getUser() != null ?
-                headerAccessor.getUser().getName() : signal.getFromUserId();
-
-        signal.setFromUserId(fromUserId);
-        signal.setTimestamp(LocalDateTime.now());
-
-        webRTCService.handleOffer(signal);
-    }
-
-    @MessageMapping("/webrtc.answer")
-    public void handleAnswer(@Payload WebRTCSignalMessage signal,
-                             SimpMessageHeaderAccessor headerAccessor) {
-        String fromUserId = headerAccessor.getUser() != null ?
-                headerAccessor.getUser().getName() : signal.getFromUserId();
-
-        signal.setFromUserId(fromUserId);
-        signal.setTimestamp(LocalDateTime.now());
-
-        webRTCService.handleAnswer(signal);
-    }
-
-    @MessageMapping("/webrtc.ice")
-    public void handleIceCandidate(@Payload WebRTCSignalMessage signal,
-                                   SimpMessageHeaderAccessor headerAccessor) {
-        String fromUserId = headerAccessor.getUser() != null ?
-                headerAccessor.getUser().getName() : signal.getFromUserId();
-
-        signal.setFromUserId(fromUserId);
-        signal.setTimestamp(LocalDateTime.now());
-
-        webRTCService.handleIceCandidate(signal);
-    }
 
     @MessageMapping("/webrtc.close/{callId}")
     public void closePeerConnection(@DestinationVariable String callId,

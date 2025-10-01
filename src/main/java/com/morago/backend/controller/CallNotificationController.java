@@ -55,11 +55,8 @@ public class CallNotificationController {
                                    SimpMessageHeaderAccessor headerAccessor) {
         String fromUserId = headerAccessor.getUser() != null ?
                 headerAccessor.getUser().getName() : signal.getFromUserId();
-
-        signal.setCallId(callId);
+        signal.setCallId(Long.valueOf(callId));
         signal.setFromUserId(fromUserId);
-        signal.setTimestamp(LocalDateTime.now());
-
         callNotificationService.handleWebRTCSignal(signal);
     }
 }

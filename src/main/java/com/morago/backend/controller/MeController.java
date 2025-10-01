@@ -2,30 +2,26 @@ package com.morago.backend.controller;
 
 import com.morago.backend.dto.FileResponse;
 import com.morago.backend.dto.password.ChangePasswordRequestDto;
-import com.morago.backend.dto.user.UserUpdateProfileRequestDto;
-import com.morago.backend.dto.user.UserUpdateProfileResponseDto;
 import com.morago.backend.service.file.FileService;
 import com.morago.backend.service.user.UserService;
+import com.morago.backend.dto.NotificationDto;
+import com.morago.backend.service.notification.NotificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import org.springframework.web.bind.annotation.RequestBody;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/me")
@@ -35,28 +31,7 @@ public class MeController {
 
     private final UserService userService;
     private final FileService fileService;
-
-    @Operation(
-            summary = "Update profile",
-            description = "Allows an authenticated user to update their profile information.",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    content = @Content(schema = @Schema(implementation = UserUpdateProfileRequestDto.class))
-            ),
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Profile updated successfully",
-                            content = @Content(schema = @Schema(implementation = UserUpdateProfileResponseDto.class))),
-                    @ApiResponse(responseCode = "400", description = "Invalid request data"),
-                    @ApiResponse(responseCode = "401", description = "Unauthorized"),
-                    @ApiResponse(responseCode = "403", description = "Forbidden")
-            }
-    )
-    @PatchMapping("/profile")
-    @PreAuthorize("hasAnyRole('USER','TRANSLATOR','ADMIN')")
-    public UserUpdateProfileResponseDto updateMyProfile(
-            @Valid @RequestBody UserUpdateProfileRequestDto dto) {
-        return userService.updateMyProfile(dto);
-    }
+    private final NotificationService notificationService;
 
     @Operation(
             summary = "Change password",
@@ -120,4 +95,37 @@ public class MeController {
         fileService.deleteMyAvatar();
     }
 
+    @Operation(
+            summary = "Get my notifications",
+            description = "Retrieve all notifications for the currently authenticated user.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Notifications retrieved",
+                            content = @Content(schema = @Schema(implementation = NotificationDto.class))),
+                    @ApiResponse(responseCode = "401", description = "Unauthorized")
+            }
+    )
+    @GetMapping("/notifications")
+    @PreAuthorize("hasAnyRole('USER','TRANSLATOR','ADMIN')")
+    public ResponseEntity<List<NotificationDto>> getMyNotifications() {
+        Long userId = userService.getCurrentUserId();
+        return ResponseEntity.ok(notificationService.getNotificationsByUserId(userId));
+    }
+
+
+
+    @Operation(
+            summary = "Clear my notifications",
+            description = "Deletes all notifications for the currently authenticated user.",
+            responses = {
+                    @ApiResponse(responseCode = "204", description = "Notifications cleared"),
+                    @ApiResponse(responseCode = "401", description = "Unauthorized")
+            }
+    )
+    @DeleteMapping("/notifications")
+    @PreAuthorize("hasAnyRole('USER','TRANSLATOR','ADMIN')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void clearMyNotifications() {
+        Long userId = userService.getCurrentUserId();
+        notificationService.clearNotificationsForUser(userId);
+    }
 }

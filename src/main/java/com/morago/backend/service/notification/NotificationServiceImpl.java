@@ -55,4 +55,21 @@ public class NotificationServiceImpl implements NotificationService {
         Notification notification = getEntityById(id);
         notificationRepository.delete(notification);
     }
+    @Override
+    public List<NotificationDto> getNotificationsByUserId(Long userId) {
+        return notificationRepository.findAll()
+                .stream()
+                .filter(n -> n.getUser() != null && n.getUser().getId().equals(userId))
+                .map(notificationMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public void clearNotificationsForUser(Long userId) {
+        List<Notification> userNotifications = notificationRepository.findAll()
+                .stream()
+                .filter(n -> n.getUser() != null && n.getUser().getId().equals(userId))
+                .toList();
+        notificationRepository.deleteAll(userNotifications);
+    }
 }

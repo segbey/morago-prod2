@@ -6,12 +6,12 @@ import org.springframework.http.HttpStatus;
 import java.util.Map;
 
 @Getter
-public abstract class ApiException extends RuntimeException {
+public class ApiException extends RuntimeException {
     private final HttpStatus status;
     private final String code;
     private final Map<String, String> errors;
 
-    protected ApiException(HttpStatus status, String code, String message) {
+    public ApiException(HttpStatus status, String code, String message) {
         this(status, code, message, null);
     }
     protected ApiException(HttpStatus status, String code, String message, Map<String, String> errors) {

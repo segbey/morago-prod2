@@ -42,4 +42,8 @@ public class Notification {
     @Column(name = "date_time")
     private LocalDateTime dateTime;
 
+    @Column(name = "is_read")
+    private Boolean isRead = false;
+
+
 }

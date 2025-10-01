@@ -18,5 +18,5 @@ public class NotificationDto {
     private String text;
     private LocalDateTime dateTime;
     private LocalDateTime errorTime;
-    private boolean read;
+    private boolean IsRead;
 }
