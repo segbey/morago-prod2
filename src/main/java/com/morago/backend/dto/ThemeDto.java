@@ -28,18 +28,18 @@ public class ThemeDto {
 
     private String description;
 
-    private boolean isPopular;
+    private Boolean popular;
 
-    private boolean isActive;
+    private Boolean active;
 
-    private LocalDateTime createdAt;
-
-    private LocalDateTime updatedAt;
+//    private LocalDateTime createdAt;
+//
+//    private LocalDateTime updatedAt;
 
     private Long categoryId;
     private Long iconFileId;
 
-    private List<Long> translatorProfileIds;
-
-    private List<TranslatorProfileDto> translators;
+//    private List<Long> translatorProfileIds;
+//
+//    private List<TranslatorProfileDto> translators;
 }

@@ -42,8 +42,8 @@ public class ThemeServiceImpl implements ThemeService {
         existing.setPrice(dto.getPrice());
         existing.setNightPrice(dto.getNightPrice());
         existing.setDescription(dto.getDescription());
-        existing.setPopular(dto.isPopular());
-        existing.setActive(dto.isActive());
+        existing.setPopular(dto.getPopular());
+        existing.setActive(dto.getActive());
 
 
 //        if (dto.getCategoryId() != null) {

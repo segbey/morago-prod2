@@ -11,10 +11,12 @@ public interface ThemeMapper {
 
     ThemeMapper INSTANCE = Mappers.getMapper(ThemeMapper.class);
 
-    @Mapping(target = "translators", source = "translators")
+    @Mapping(target = "popular",     expression = "java(theme.isPopular())")
+    @Mapping(target = "active",      expression = "java(theme.isActive())")
+//    @Mapping(target = "translators", source = "translators")
     ThemeDto toDto(Theme theme);
 
-    @Mapping(target = "translators", source = "translators")
+//    @Mapping(target = "translators", source = "translators")
     Theme toEntity(ThemeDto dto);
 }
 

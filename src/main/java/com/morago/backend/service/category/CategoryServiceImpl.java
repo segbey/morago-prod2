@@ -32,7 +32,7 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryDto update(Long id, CategoryDto categoryDto) {
         Category existing = getEntityOrThrow(id);
         existing.setName(categoryDto.getName());
-        existing.setActive(categoryDto.isActive());
+        existing.setActive(categoryDto.getActive());
         return categoryMapper.toDto(categoryRepository.save(existing));
     }
 

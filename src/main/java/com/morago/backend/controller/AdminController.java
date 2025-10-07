@@ -1,5 +1,7 @@
 package com.morago.backend.controller;
 
+import com.morago.backend.dto.CategoryDto;
+import com.morago.backend.dto.ThemeDto;
 import com.morago.backend.dto.billing.transaction.TransactionAdminDto;
 import com.morago.backend.dto.billing.withdrawal.WithdrawalDto;
 import com.morago.backend.dto.call.CallDto;
@@ -7,11 +9,14 @@ import com.morago.backend.dto.translator.TranslatorProfileDto;
 import com.morago.backend.dto.user.UserDto;
 import com.morago.backend.service.admin.AdminService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -28,7 +33,12 @@ public class AdminController {
     @GetMapping("/users")
     @Operation(summary = "List all users (paginated)")
     @ApiResponse(responseCode = "200", description = "List of users retrieved successfully")
-    public ResponseEntity<Page<UserDto>> users(Pageable pageable) {
+    public ResponseEntity<Page<UserDto>> Users(
+            @Parameter(description = "Pagination and sorting")
+            @PageableDefault(size = 20) Pageable pageable,
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) String q
+    ) {
         return ResponseEntity.ok(adminService.listUsers(pageable));
     }
 
@@ -89,13 +99,13 @@ public class AdminController {
 //    public ResponseEntity<TranslatorProfileDto> updateTranslator(@PathVariable Long id, @RequestBody TranslatorProfileDto dto) {
 //        return ResponseEntity.ok(adminService.updateTranslator(id, dto));
 //    }
-//
-//    @DeleteMapping("/translators/{id}")
-//    @Operation(summary = "Delete translator profile")
-//    public ResponseEntity<Void> deleteTranslator(@PathVariable Long id) {
-//        adminService.deleteTranslator(id);
-//        return ResponseEntity.noContent().build();
-//    }
+
+    @DeleteMapping("/translators/{id}")
+    @Operation(summary = "Delete translator profile")
+    public ResponseEntity<Void> deleteTranslator(@PathVariable Long id) {
+        adminService.deleteTranslator(id);
+        return ResponseEntity.noContent().build();
+    }
 
     @PutMapping("/translators/{id}/approve")
     @Operation(summary = "Approve a translator")
@@ -104,12 +114,12 @@ public class AdminController {
         return ResponseEntity.ok().build();
     }
 
-//    @PutMapping("/translators/{id}/decline")
-//    @Operation(summary = "Decline a translator")
-//    public ResponseEntity<Void> declineTranslator(@PathVariable Long id) {
-//        adminService.declineTranslator(id);
-//        return ResponseEntity.ok().build();
-//    }
+    @PutMapping("/translators/{id}/decline")
+    @Operation(summary = "Decline a translator")
+    public ResponseEntity<Void> declineTranslator(@PathVariable Long id) {
+        adminService.declineTranslator(id);
+        return ResponseEntity.ok().build();
+    }
 
 
     @GetMapping("/calls")
@@ -145,25 +155,36 @@ public class AdminController {
         return ResponseEntity.ok(adminService.listTransactions(userId, pageable));
     }
 
+    @GetMapping("/themes")
+    public ResponseEntity<Page<ThemeDto>> listThemes(@PageableDefault(size = 20) Pageable pageable,
+                                                     @RequestParam(required = false) String q) {
+        return ResponseEntity.ok(adminService.listThemes(pageable, q));
+    }
 
-//    @PostMapping("/themes")
-//    @Operation(summary = "Create a new theme")
-//    public ResponseEntity<?> createTheme(@RequestBody String themeName) {
-//        return ResponseEntity.status(201).body(adminService.createTheme(themeName));
-//    }
-//
-//    @PutMapping("/themes/{id}")
-//    @Operation(summary = "Update a theme")
-//    public ResponseEntity<?> updateTheme(@PathVariable Long id, @RequestBody String themeName) {
-//        return ResponseEntity.ok(adminService.updateTheme(id, themeName));
-//    }
-//
-//    @DeleteMapping("/themes/{id}")
-//    @Operation(summary = "Delete a theme")
-//    public ResponseEntity<Void> deleteTheme(@PathVariable Long id) {
-//        adminService.deleteTheme(id);
-//        return ResponseEntity.noContent().build();
-//    }
+    @PostMapping("/themes")
+    @Operation(summary = "Create a new theme")
+    public ResponseEntity<ThemeDto> createTheme(@Valid @RequestBody ThemeDto dto) {
+        return ResponseEntity.ok(adminService.createTheme(dto));
+    }
+
+    @PutMapping("/themes/{id}")
+    @Operation(summary = "Update a theme")
+    public ResponseEntity<ThemeDto> updateTheme(@PathVariable Long id, @Valid @RequestBody ThemeDto dto) {
+        return ResponseEntity.ok(adminService.updateTheme(id, dto));
+    }
+
+    @DeleteMapping("/themes/{id}")
+    @Operation(summary = "Delete a theme")
+    public ResponseEntity<Void> deleteTheme(@PathVariable Long id) {
+        adminService.deleteTheme(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/categories")
+    public ResponseEntity<Page<CategoryDto>> listCategories(@PageableDefault(size = 20) Pageable pageable,
+                                                            @RequestParam(required = false) String q) {
+        return ResponseEntity.ok(adminService.listCategories(pageable, q));
+    }
 
     @PostMapping("/categories")
     @Operation(summary = "Create a new category")
@@ -183,4 +204,30 @@ public class AdminController {
         adminService.deleteCategory(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/users/{userId}/calls")
+    public ResponseEntity<Page<CallDto>> callsByUser(@PathVariable Long userId,
+                                                     @org.springframework.data.web.PageableDefault(size=20) Pageable pageable) {
+        return ResponseEntity.ok(adminService.listCallsByUser(userId, pageable));
+    }
+
+    @GetMapping("/translators/{translatorUserId}/calls")
+    public ResponseEntity<Page<CallDto>> callsByTranslator(@PathVariable Long translatorUserId,
+                                                           @org.springframework.data.web.PageableDefault(size=20) Pageable pageable) {
+        return ResponseEntity.ok(adminService.listCallsByTranslator(translatorUserId, pageable));
+    }
+
+    @GetMapping("/translators/{translatorUserId}/withdrawals")
+    public ResponseEntity<Page<WithdrawalDto>> withdrawalsByTranslator(@PathVariable Long translatorUserId,
+                                                                       @org.springframework.data.web.PageableDefault(size=20) Pageable pageable,
+                                                                       @RequestParam(required = false) String status) {
+        return ResponseEntity.ok(adminService.listWithdrawalsByTranslator(translatorUserId, pageable, status));
+    }
+
+    @GetMapping("/users/{userId}/deposits")
+    public ResponseEntity<Page<TransactionAdminDto>> depositsByUser(@PathVariable Long userId,
+                                                                    @org.springframework.data.web.PageableDefault(size=20) Pageable pageable) {
+        return ResponseEntity.ok(adminService.listDepositsByUser(userId, pageable));
+    }
+
 }

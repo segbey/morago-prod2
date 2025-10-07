@@ -9,4 +9,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface WithdrawalRepository extends JpaRepository<Withdrawal, Long> {
     Page<Withdrawal> findByStatus(String status, Pageable pageable);
+
+    Page<Withdrawal> findByUser_Id(Long userId, Pageable pageable);
+    Page<Withdrawal> findByUser_IdAndStatus(Long userId, String status, Pageable pageable);
+    boolean existsByUser_IdAndStatus(Long userId, String status);
 }

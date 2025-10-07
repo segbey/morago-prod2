@@ -17,4 +17,6 @@ public interface RatingRepository extends JpaRepository<Rating, Long> {
 
     @Query("select count(r) from Rating r where r.translator.id = :translatorId")
     Long countByTranslator(@Param("translatorId") Long translatorId);
+
+    void deleteByTranslatorId(Long translatorId);
 }
