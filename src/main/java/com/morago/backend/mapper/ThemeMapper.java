@@ -13,6 +13,7 @@ public interface ThemeMapper {
 
     @Mapping(target = "popular",     expression = "java(theme.isPopular())")
     @Mapping(target = "active",      expression = "java(theme.isActive())")
+    @Mapping(target = "iconUrl", expression = "java(theme.getIcon() != null ? theme.getIcon().getPath() : null)")
 //    @Mapping(target = "translators", source = "translators")
     ThemeDto toDto(Theme theme);
 

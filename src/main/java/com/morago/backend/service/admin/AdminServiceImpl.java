@@ -1,7 +1,11 @@
 package com.morago.backend.service.admin;
 
+import com.morago.backend.dto.FileResponse;
+import com.morago.backend.dto.LanguageDto;
 import com.morago.backend.dto.ThemeDto;
 import com.morago.backend.dto.CategoryDto;
+import com.morago.backend.dto.admin.AdminTranslatorDto;
+import com.morago.backend.dto.admin.AdminUserDto;
 import com.morago.backend.dto.billing.transaction.TransactionAdminDto;
 import com.morago.backend.dto.billing.withdrawal.WithdrawalDto;
 import com.morago.backend.dto.call.CallDto;
@@ -10,11 +14,14 @@ import com.morago.backend.dto.user.UserDto;
 import com.morago.backend.entity.*;
 import com.morago.backend.entity.enumFiles.FileCategory;
 import com.morago.backend.entity.enumFiles.Roles;
+import com.morago.backend.exception.ResourceAlreadyExistsException;
 import com.morago.backend.exception.ResourceNotFoundException;
+import com.morago.backend.exception.phonenumber.PhoneAlreadyExistsException;
 import com.morago.backend.mapper.*;
 import com.morago.backend.repository.*;
 import com.morago.backend.service.call.CallService;
 import com.morago.backend.service.deposit.DepositService;
+import com.morago.backend.service.file.FileService;
 import com.morago.backend.service.profile.TranslatorProfileService;
 import com.morago.backend.service.role.RoleService;
 import com.morago.backend.service.transaction.TransactionService;
@@ -26,7 +33,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.morago.backend.entity.enumFiles.TransactionType;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.math.BigDecimal;
+import java.util.HashSet;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +49,7 @@ public class AdminServiceImpl implements AdminService {
     private final TranslatorProfileService translatorProfileService;
     private final TranslatorProfileMapper translatorProfileMapper;
     private final UserMapper userMapper;
+    private final LanguageMapper languageMapper;
     private final CallService callService;
     private final WithdrawalRepository withdrawalRepository;
     private final WithdrawalMapper withdrawalMapper;
@@ -51,9 +65,12 @@ public class AdminServiceImpl implements AdminService {
     private final FileRepository fileRepository;
     private final CallRepository callRepository;
     private final CallMapper callMapper;
+    private final PasswordEncoder passwordEncoder;
     private final TransactionRepository transactionRepository;
     private final RatingRepository ratingRepository;
     private final TranslatorProfileRepository translatorProfileRepository;
+    private final FileService fileService;
+    private final LanguageRepository languageRepository;
 
 
     @Override
@@ -62,13 +79,30 @@ public class AdminServiceImpl implements AdminService {
         return userRepository.findAll(pageable).map(userMapper::toDto);
     }
 
-//    @Override
-//    @Transactional
-//    public UserDto createUser(UserDto dto) {
-//        User user = userMapper.toEntity(dto);
-//        user.setActive(true);
-//        return userMapper.toDto(userRepository.save(user));
-//    }
+    @Override
+    @Transactional
+    public UserDto createUser(AdminUserDto req) {
+
+        if (userRepository.existsByUsername(req.getPhoneNumber())) {
+            throw new PhoneAlreadyExistsException(req.getPhoneNumber());
+        }
+
+        BigDecimal initialBalance = req.getBalance() != null ? req.getBalance() : BigDecimal.ZERO;
+
+        User user = new User();
+        user.setFirstName(req.getFirstName());
+        user.setLastName(req.getLastName());
+        user.setUsername(req.getPhoneNumber());
+        user.setPassword(passwordEncoder.encode(req.getPassword()));
+        user.setBalance(initialBalance);
+        user.setRoles(new HashSet<>());
+
+        Role defaultRole = roleService.getRoleOrThrow(Roles.ROLE_USER);
+        user.getRoles().add(defaultRole);
+
+        User saved = userRepository.save(user);
+        return userMapper.toDto(saved);
+    }
 
     @Override
     @Transactional
@@ -97,11 +131,65 @@ public class AdminServiceImpl implements AdminService {
         return translatorProfileService.getById(id);
     }
 
-    @Override
-    @Transactional
-    public TranslatorProfileDto createTranslator(TranslatorProfileDto dto) {
-        return translatorProfileService.create(dto);
+//    @Override
+//    @Transactional
+//    public TranslatorProfileDto createTranslator(TranslatorProfileDto dto) {
+//        return translatorProfileService.create(dto);
+//    }
+@Override
+@Transactional(rollbackFor = Exception.class)
+public TranslatorProfileDto createTranslator(AdminTranslatorDto req,
+                                MultipartFile avatar,
+                                MultipartFile[] docs) {
+
+    if (userRepository.existsByUsername(req.getPhoneNumber())) {
+        throw new PhoneAlreadyExistsException(req.getPhoneNumber());
     }
+
+    User user = new User();
+    user.setFirstName(req.getFirstName());
+    user.setLastName(req.getLastName());
+    user.setUsername(req.getPhoneNumber());
+    user.setPassword(passwordEncoder.encode(req.getPassword()));
+    user.setRoles(new HashSet<>());
+
+    user.getRoles().add(roleService.getRoleOrThrow(Roles.ROLE_TRANSLATOR));
+    user = userRepository.save(user);
+
+    List<Language> languages = languageRepository.findAllById(req.getLanguageIds());
+    if (languages.size() != req.getLanguageIds().size()) {
+        throw new ResourceNotFoundException("One or more languages not found");
+    }
+    List<Theme> themes = themeRepository.findAllById(req.getThemeIds());
+    if (themes.size() != req.getThemeIds().size()) {
+        throw new ResourceNotFoundException("One or more themes not found");
+    }
+
+
+    TranslatorProfile profile = TranslatorProfile.builder()
+            .user(user)
+            .dateOfBirth(req.getDateOfBirth())
+            .levelOfKorean(req.getLevelOfKorean().toUpperCase())
+            .isVerified(false)
+            .build();
+
+    profile.setLanguages(new HashSet<>(languages));
+    profile.setThemes(new HashSet<>(themes));
+
+    // Upload files (still inside TX; throw to rollback on failure)
+    if (avatar != null && !avatar.isEmpty()) {
+        fileService.uploadAvatar(user.getId(), avatar);
+    }
+    if (docs != null) {
+        for (MultipartFile doc : docs) {
+            if (doc != null && !doc.isEmpty()) {
+                fileService.uploadTranslatorDoc(user.getId(), doc); // must throw on failure
+            }
+        }
+    }
+
+    return translatorProfileMapper.toDto(translatorProfileRepository.save(profile));
+}
 
 //    @Override
 //    @Transactional
@@ -240,19 +328,79 @@ public void deleteTranslator(Long userId) {
         return themeRepository.findAll(pageable).map(themeMapper::toDto);
     }
 
+//    @Override
+//    @Transactional
+//    public ThemeDto createTheme(ThemeDto dto) {
+//        Theme theme = Theme.builder()
+//                .name(dto.getName())
+//                .koreanTitle(dto.getKoreanTitle())
+//                .price(dto.getPrice())
+//                .nightPrice(dto.getNightPrice())
+//                .description(dto.getDescription())
+//                .isPopular(dto.getPopular() != null ? dto.getPopular() : false)
+//                .isActive(dto.getActive() != null ? dto.getActive() : true)
+//                .build();
+//
+//
+//        if (dto.getCategoryId() != null) {
+//            var category = categoryRepository.findById(dto.getCategoryId())
+//                    .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + dto.getCategoryId()));
+//            theme.setCategory(category);
+//        }
+//
+//
+//        if (dto.getIconFileId() != null) {
+//            File icon = fileRepository.findById(dto.getIconFileId())
+//                    .orElseThrow(() -> new ResourceNotFoundException("Icon file not found: " + dto.getIconFileId()));
+//            theme.setIcon(icon);
+//        }
+//
+//        Theme saved = themeRepository.save(theme);
+//        return themeMapper.toDto(saved);
+//    }
+//
+//    @Override
+//    @Transactional
+//    public ThemeDto updateTheme(Long id, ThemeDto dto) {
+//        Theme theme = themeRepository.findById(id)
+//                .orElseThrow(() -> new ResourceNotFoundException("Theme not found: " + id));
+//
+//        if (dto.getName() != null) theme.setName(dto.getName());
+//        if (dto.getKoreanTitle() != null) theme.setKoreanTitle(dto.getKoreanTitle());
+//        if (dto.getPrice() != null) theme.setPrice(dto.getPrice());
+//        if (dto.getNightPrice() != null) theme.setNightPrice(dto.getNightPrice());
+//        if (dto.getDescription() != null) theme.setDescription(dto.getDescription());
+//        if (dto.getPopular() != null) theme.setPopular(dto.getPopular());
+//        if (dto.getActive() != null) theme.setActive(dto.getActive());
+//
+//        if (dto.getCategoryId() != null) {
+//            var category = categoryRepository.findById(dto.getCategoryId())
+//                    .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + dto.getCategoryId()));
+//            theme.setCategory(category);
+//        }
+//
+//        if (dto.getIconFileId() != null) {
+//            File icon = fileRepository.findById(dto.getIconFileId())
+//                    .orElseThrow(() -> new ResourceNotFoundException("Icon file not found: " + dto.getIconFileId()));
+//            theme.setIcon(icon);
+//        }
+//
+//        Theme saved = themeRepository.save(theme);
+//        return themeMapper.toDto(saved);
+//    }
+
     @Override
     @Transactional
-    public ThemeDto createTheme(ThemeDto dto) {
+    public ThemeDto createTheme(ThemeDto dto, MultipartFile icon) {
         Theme theme = Theme.builder()
                 .name(dto.getName())
                 .koreanTitle(dto.getKoreanTitle())
                 .price(dto.getPrice())
                 .nightPrice(dto.getNightPrice())
                 .description(dto.getDescription())
-                .isPopular(dto.getPopular() != null ? dto.getPopular() : false)
-                .isActive(dto.getActive() != null ? dto.getActive() : true)
+                .isPopular(Boolean.TRUE.equals(dto.getPopular()))
+                .isActive(dto.getActive() == null ? true : dto.getActive())
                 .build();
-
 
         if (dto.getCategoryId() != null) {
             var category = categoryRepository.findById(dto.getCategoryId())
@@ -260,20 +408,25 @@ public void deleteTranslator(Long userId) {
             theme.setCategory(category);
         }
 
+        // Save first to get an ID
+        theme = themeRepository.save(theme);
 
-        if (dto.getIconFileId() != null) {
-            File icon = fileRepository.findById(dto.getIconFileId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Icon file not found: " + dto.getIconFileId()));
-            theme.setIcon(icon);
+        // If icon provided, upload & attach
+        if (icon != null && !icon.isEmpty()) {
+            FileResponse savedIcon = fileService.uploadThemeIcon(theme.getId(), icon);
+            File fileEntity = fileRepository.findById(savedIcon.id())
+                    .orElseThrow(() -> new ResourceNotFoundException("Uploaded file not found: " + savedIcon.id()));
+
+            theme.setIcon(fileEntity);
+            theme = themeRepository.save(theme);
         }
 
-        Theme saved = themeRepository.save(theme);
-        return themeMapper.toDto(saved);
+        return themeMapper.toDto(theme);
     }
 
     @Override
     @Transactional
-    public ThemeDto updateTheme(Long id, ThemeDto dto) {
+    public ThemeDto updateTheme(Long id, ThemeDto dto, MultipartFile icon) {
         Theme theme = themeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Theme not found: " + id));
 
@@ -291,14 +444,22 @@ public void deleteTranslator(Long userId) {
             theme.setCategory(category);
         }
 
-        if (dto.getIconFileId() != null) {
-            File icon = fileRepository.findById(dto.getIconFileId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Icon file not found: " + dto.getIconFileId()));
-            theme.setIcon(icon);
+        theme = themeRepository.save(theme);
+
+        // Handle icon replacement if provided
+        if (icon != null && !icon.isEmpty()) {
+            // Optionally delete/replace old icon file if present
+            // if (theme.getIcon() != null) fileService.delete(theme.getIcon().getId());
+
+            FileResponse newIcon = fileService.uploadThemeIcon(theme.getId(), icon);
+            File fileEntity = fileRepository.findById(newIcon.id())
+                    .orElseThrow(() -> new ResourceNotFoundException("Uploaded file not found: " + newIcon.id()));
+
+            theme.setIcon(fileEntity);
+            theme = themeRepository.save(theme);
         }
 
-        Theme saved = themeRepository.save(theme);
-        return themeMapper.toDto(saved);
+        return themeMapper.toDto(theme);
     }
 
     @Override
@@ -376,5 +537,63 @@ public void deleteTranslator(Long userId) {
                 userId, TransactionType.DEPOSIT, pageable);
         return page.map(transactionMapper::toAdminDto);
     }
+    @Override
+    @Transactional(readOnly = true)
+    public Page<LanguageDto> listLanguages(Pageable pageable, String q) {
+        Page<Language> page =
+                (q != null && !q.isBlank())
+                        ? languageRepository.findByNameContainingIgnoreCase(q.trim(), pageable)
+                        : languageRepository.findAll(pageable);
+        return page.map(languageMapper::toDto);
+    }
+
+    @Override
+    @Transactional
+    public LanguageDto createLanguage(LanguageDto dto) {
+        String raw = dto.getName() == null ? "" : dto.getName().trim();
+        if (raw.isEmpty()) throw new IllegalArgumentException("Language name is required");
+        if (languageRepository.existsByNameIgnoreCase(raw)) {
+            throw new ResourceAlreadyExistsException("Language already exists: " + raw);
+        }
+        var entity = Language.builder().name(raw).build();
+        var saved = languageRepository.save(entity);
+        return languageMapper.toDto(saved);
+    }
+
+    @Override
+    @Transactional
+    public LanguageDto updateLanguage(Long id, LanguageDto dto) {
+        var entity = languageRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Language not found: " + id));
+
+        if (dto.getName() != null) {
+            String raw = dto.getName().trim();
+            if (raw.isEmpty()) throw new IllegalArgumentException("Language name cannot be blank");
+            if (!raw.equalsIgnoreCase(entity.getName()) && languageRepository.existsByNameIgnoreCase(raw)) {
+                throw new ResourceAlreadyExistsException("Language already exists: " + raw);
+            }
+            entity.setName(raw);
+        }
+
+        var saved = languageRepository.save(entity);
+        return languageMapper.toDto(saved);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public void deleteLanguage(Long id) {
+        var lang = languageRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Language not found: " + id));
+
+        if (!lang.getTranslatorProfiles().isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Language is in use by one or more translators"
+            );
+        }
+
+        languageRepository.delete(lang);
+    }
+
 
 }

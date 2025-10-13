@@ -1,13 +1,17 @@
 package com.morago.backend.controller;
 
 import com.morago.backend.dto.CategoryDto;
+import com.morago.backend.dto.LanguageDto;
 import com.morago.backend.dto.ThemeDto;
+import com.morago.backend.dto.admin.AdminTranslatorDto;
+import com.morago.backend.dto.admin.AdminUserDto;
 import com.morago.backend.dto.billing.transaction.TransactionAdminDto;
 import com.morago.backend.dto.billing.withdrawal.WithdrawalDto;
 import com.morago.backend.dto.call.CallDto;
 import com.morago.backend.dto.translator.TranslatorProfileDto;
 import com.morago.backend.dto.user.UserDto;
 import com.morago.backend.service.admin.AdminService;
+import com.morago.backend.service.file.FileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -17,9 +21,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/admin")
@@ -29,6 +35,7 @@ import org.springframework.web.bind.annotation.*;
 public class AdminController {
 
     private final AdminService adminService;
+    private final FileService fileService;
 
     @GetMapping("/users")
     @Operation(summary = "List all users (paginated)")
@@ -42,12 +49,20 @@ public class AdminController {
         return ResponseEntity.ok(adminService.listUsers(pageable));
     }
 
-//    @PostMapping("/users")
-//    @Operation(summary = "Create a new user")
-//    @ApiResponse(responseCode = "201", description = "User created successfully")
-//    public ResponseEntity<UserDto> createUser(@RequestBody UserDto userDto) {
-//        return ResponseEntity.status(201).body(adminService.createUser(userDto));
-//    }
+    @PostMapping(value = "/users", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Create a user (admin) with optional avatar upload")
+    public ResponseEntity<UserDto> createUser(
+            @RequestPart("user") @Valid AdminUserDto req,
+            @RequestPart(value = "avatar", required = false) MultipartFile avatar
+    ) {
+        UserDto created = adminService.createUser(req);
+
+        if (avatar != null && !avatar.isEmpty()) {
+            fileService.uploadAvatar(created.getId(), avatar);
+            // created = adminService.getUser(created.getId());
+        }
+        return ResponseEntity.ok(created);
+    }
 
 //    @PutMapping("/users/{id}")
 //    @Operation(summary = "Update an existing user")
@@ -88,10 +103,21 @@ public class AdminController {
         return ResponseEntity.ok(adminService.getTranslator(id));
     }
 
-    @PostMapping("/translators")
-    @Operation(summary = "Create a new translator profile")
-    public ResponseEntity<TranslatorProfileDto> createTranslator(@RequestBody TranslatorProfileDto dto) {
-        return ResponseEntity.status(201).body(adminService.createTranslator(dto));
+//    @PostMapping("/translators")
+//    @Operation(summary = "Create a new translator profile")
+//    public ResponseEntity<TranslatorProfileDto> createTranslator(@RequestBody TranslatorProfileDto dto) {
+//        return ResponseEntity.status(201).body(adminService.createTranslator(dto));
+//    }
+
+    @PostMapping(value = "/translators", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Create a translator (admin) with avatar and documents; fully transactional")
+    public ResponseEntity<TranslatorProfileDto> createTranslator(
+            @RequestPart("translator") @Valid AdminTranslatorDto req,
+            @RequestPart(value = "avatar", required = false) MultipartFile avatar,
+            @RequestPart(value = "docs", required = false) MultipartFile[] docs
+    ) {
+        TranslatorProfileDto created = adminService.createTranslator(req, avatar, docs);
+        return ResponseEntity.status(201).body(created);
     }
 
 //    @PutMapping("/translators/{id}")
@@ -161,17 +187,36 @@ public class AdminController {
         return ResponseEntity.ok(adminService.listThemes(pageable, q));
     }
 
-    @PostMapping("/themes")
-    @Operation(summary = "Create a new theme")
-    public ResponseEntity<ThemeDto> createTheme(@Valid @RequestBody ThemeDto dto) {
-        return ResponseEntity.ok(adminService.createTheme(dto));
+    @PostMapping(value = "/themes", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Create a new theme (with optional icon upload)")
+    public ResponseEntity<ThemeDto> createTheme(
+            @RequestPart("theme") @Valid ThemeDto dto,
+            @RequestPart(value = "icon", required = false) MultipartFile icon
+    ) {
+        return ResponseEntity.ok(adminService.createTheme(dto, icon));
     }
 
-    @PutMapping("/themes/{id}")
-    @Operation(summary = "Update a theme")
-    public ResponseEntity<ThemeDto> updateTheme(@PathVariable Long id, @Valid @RequestBody ThemeDto dto) {
-        return ResponseEntity.ok(adminService.updateTheme(id, dto));
+    @PutMapping(value = "/themes/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Update a theme (with optional icon upload)")
+    public ResponseEntity<ThemeDto> updateTheme(
+            @PathVariable Long id,
+            @RequestPart("theme") @Valid ThemeDto dto,
+            @RequestPart(value = "icon", required = false) MultipartFile icon
+    ) {
+        return ResponseEntity.ok(adminService.updateTheme(id, dto, icon));
     }
+
+//    @PostMapping("/themes")
+//    @Operation(summary = "Create a new theme")
+//    public ResponseEntity<ThemeDto> createTheme(@Valid @RequestBody ThemeDto dto) {
+//        return ResponseEntity.ok(adminService.createTheme(dto));
+//    }
+//
+//    @PutMapping("/themes/{id}")
+//    @Operation(summary = "Update a theme")
+//    public ResponseEntity<ThemeDto> updateTheme(@PathVariable Long id, @Valid @RequestBody ThemeDto dto) {
+//        return ResponseEntity.ok(adminService.updateTheme(id, dto));
+//    }
 
     @DeleteMapping("/themes/{id}")
     @Operation(summary = "Delete a theme")
@@ -228,6 +273,36 @@ public class AdminController {
     public ResponseEntity<Page<TransactionAdminDto>> depositsByUser(@PathVariable Long userId,
                                                                     @org.springframework.data.web.PageableDefault(size=20) Pageable pageable) {
         return ResponseEntity.ok(adminService.listDepositsByUser(userId, pageable));
+    }
+
+
+    @GetMapping("/languages")
+    @io.swagger.v3.oas.annotations.Operation(summary = "List languages (paginated, optional name filter q)")
+    public ResponseEntity<Page<LanguageDto>> listLanguages(
+            @PageableDefault(size = 20) Pageable pageable,
+            @RequestParam(required = false) String q
+    ) {
+        return ResponseEntity.ok(adminService.listLanguages(pageable, q));
+    }
+
+    @PostMapping("/languages")
+    @io.swagger.v3.oas.annotations.Operation(summary = "Create a language")
+    public ResponseEntity<LanguageDto> createLanguage(@RequestBody @jakarta.validation.Valid LanguageDto dto) {
+        return ResponseEntity.ok(adminService.createLanguage(dto));
+    }
+
+    @PutMapping("/languages/{id}")
+    @io.swagger.v3.oas.annotations.Operation(summary = "Update a language")
+    public ResponseEntity<LanguageDto> updateLanguage(@PathVariable Long id,
+                                                      @RequestBody @jakarta.validation.Valid LanguageDto dto) {
+        return ResponseEntity.ok(adminService.updateLanguage(id, dto));
+    }
+
+    @DeleteMapping("/languages/{id}")
+    @io.swagger.v3.oas.annotations.Operation(summary = "Delete a language (409 if in use)")
+    public ResponseEntity<Void> deleteLanguage(@PathVariable Long id) {
+        adminService.deleteLanguage(id);
+        return ResponseEntity.noContent().build();
     }
 
 }

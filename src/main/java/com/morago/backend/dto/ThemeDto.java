@@ -37,7 +37,7 @@ public class ThemeDto {
 //    private LocalDateTime updatedAt;
 
     private Long categoryId;
-    private Long iconFileId;
+    private String iconUrl;
 
 //    private List<Long> translatorProfileIds;
 //
