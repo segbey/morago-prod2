@@ -1,6 +1,6 @@
 package com.morago.backend.service.token;
 
-import com.morago.backend.dto.tokens.JWTResponse;
+import com.morago.backend.dto.tokens.RotatedTokens;
 import com.morago.backend.entity.RefreshToken;
 import com.morago.backend.entity.User;
 import com.morago.backend.exception.token.ExpireJwtTokenException;
@@ -10,6 +10,7 @@ import java.util.Optional;
 public interface RefreshTokenService {
     void createRefreshToken(String username, String jwtTokenString);
     Optional<RefreshToken> findByToken(String token);
+
     default RefreshToken findByTokenOrThrow(String token) {
         return findByToken(token).orElseThrow(RefreshTokenNotFoundException::new);
     }
@@ -21,9 +22,12 @@ public interface RefreshTokenService {
         }
         return rt;
     }
+
     boolean isRefreshTokenExpired(RefreshToken token);
     void deleteByUser(User user);
     void deleteByToken(String token);
-    JWTResponse refreshToken(String requestRefreshToken);
+
+    RotatedTokens refreshTokens(String requestRefreshToken);
+
     void logout(String username, String refreshTokenNullable);
 }
