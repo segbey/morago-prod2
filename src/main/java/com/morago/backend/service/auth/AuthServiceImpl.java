@@ -1,10 +1,11 @@
 package com.morago.backend.service.auth;
 
 import com.morago.backend.config.utils.JWTUtils;
-import com.morago.backend.dto.auth.AuthResponse;
+import com.morago.backend.dto.tokens.AuthTokens;
 import com.morago.backend.dto.tokens.JWTRequest;
 import com.morago.backend.dto.user.UserDto;
 import com.morago.backend.entity.User;
+import com.morago.backend.entity.enumFiles.TokenType;
 import com.morago.backend.mapper.UserMapper;
 import com.morago.backend.service.profile.TranslatorProfileService;
 import com.morago.backend.service.token.RefreshTokenService;
@@ -15,6 +16,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -27,12 +30,9 @@ public class AuthServiceImpl implements AuthService {
     private final UserMapper userMapper;
 
     @Override
-    public AuthResponse createAuthToken(JWTRequest authRequest) {
+    public AuthTokens createAuthToken(JWTRequest authRequest) {
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        authRequest.getUsername(),
-                        authRequest.getPassword()
-                )
+                new UsernamePasswordAuthenticationToken(authRequest.getUsername(), authRequest.getPassword())
         );
 
         UserDetails principal = (UserDetails) authentication.getPrincipal();
@@ -44,12 +44,14 @@ public class AuthServiceImpl implements AuthService {
 
         User user = userService.findByUsernameOrThrow(authRequest.getUsername());
         translatorProfileService.setOnlineStatus(user, true);
-
         UserDto userDto = userMapper.toDto(user);
 
-        return AuthResponse.builder()
+        Instant refreshExp = jwtUtils.getExpirationInstant(refreshToken, TokenType.REFRESH);
+
+        return AuthTokens.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
+                .refreshExpiresAt(refreshExp)
                 .user(userDto)
                 .build();
     }
