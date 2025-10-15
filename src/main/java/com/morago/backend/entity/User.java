@@ -62,7 +62,6 @@ public class User extends Auditable implements UserDetails {
 
     @Column(name = "balance", nullable = false, precision = 19, scale = 2)
     @Convert(converter = BigDecimalScale2Converter.class)
-    @DecimalMin("0.00")
     @Digits(integer = 17, fraction = 2)
     private BigDecimal balance = BigDecimal.ZERO;
 

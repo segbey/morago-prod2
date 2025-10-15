@@ -1,6 +1,7 @@
 package com.morago.backend.service.theme;
 
 import com.morago.backend.dto.ThemeDto;
+import com.morago.backend.entity.Theme;
 
 import java.util.List;
 
@@ -10,4 +11,5 @@ public interface ThemeService {
     void delete(Long id);
     ThemeDto getById(Long id);
     List<ThemeDto> getAll();
+    Theme findByIdOrThrow(Long id);
 }

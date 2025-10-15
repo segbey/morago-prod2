@@ -2,11 +2,15 @@ package com.morago.backend.service.deposit;
 
 import com.morago.backend.entity.Deposit;
 import com.morago.backend.entity.Money;
+import com.morago.backend.entity.Theme;
 import com.morago.backend.entity.User;
 import com.morago.backend.entity.enumFiles.EStatus;
 import com.morago.backend.entity.enumFiles.TransactionType;
 import com.morago.backend.exception.DepositNotFoundException;
+import com.morago.backend.repository.CallRepository;
 import com.morago.backend.repository.DepositRepository;
+import com.morago.backend.service.debtor.DebtorService;
+import com.morago.backend.service.theme.ThemeService;
 import com.morago.backend.service.transaction.TransactionService;
 import com.morago.backend.service.user.UserService;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalTime;
 
 @Slf4j
 @Service
@@ -23,6 +28,34 @@ public class DepositServiceImpl implements DepositService{
     private final DepositRepository depositRepo;
     private final UserService userService;
     private final TransactionService txnService;
+    private final ThemeService themeService;
+    private final CallRepository callRepository;
+    private final DebtorService debtorService;
+
+    @Override
+    @Transactional
+    public void authorizeCallStartByTheme(Long clientId, String callId, Long themeId) {
+        Theme theme = themeService.findByIdOrThrow(themeId);
+        boolean night = LocalTime.now().isAfter(LocalTime.of(22,0)) || LocalTime.now().isBefore(LocalTime.of(7,0));
+        BigDecimal base = theme.getPrice();
+        if (base == null) throw new IllegalStateException("Theme price is not set");
+        BigDecimal nightPrice = theme.getNightPrice();
+        BigDecimal perMinute = Money.s2(night && nightPrice != null ? nightPrice : base);
+
+        if (perMinute.signum() <= 0) {
+            throw new IllegalArgumentException("Theme per-minute price must be > 0");
+        }
+
+        User client = userService.findByIdForUpdateOrThrow(clientId);
+
+        if (client.getAvailable().compareTo(perMinute) < 0) {
+            throw new IllegalStateException("Insufficient funds to start a call (need >= 1 minute)");
+        }
+
+        client.setReserved(client.getReserved().add(perMinute));
+
+        log.info("Preauth reserved {} for call {} (clientId={}, themeId={})", perMinute, callId, clientId, themeId);
+    }
 
     @Override
     @Transactional
@@ -62,20 +95,35 @@ public class DepositServiceImpl implements DepositService{
 
         User user = userService.findByIdForUpdateOrThrow(dep.getUser().getId());
 
+        BigDecimal appliedToDebt = debtorService.repayDebt(user, amt);
+        BigDecimal remainder = amt.subtract(appliedToDebt);
+
         BigDecimal before = user.getBalance();
-        user.setBalance(before.add(amt));
+        if (remainder.signum() > 0) {
+            user.setBalance(before.add(remainder));
+        }
 
         String corr = "deposit:" + dep.getId();
         try {
-            txnService.log(user, TransactionType.DEPOSIT, amt, before, user.getBalance(),
-                    corr, "Deposit confirmed", EStatus.SUCCESSFUL);
+            txnService.log(
+                    user,
+                    TransactionType.DEPOSIT,
+                    amt,
+                    before,
+                    user.getBalance(),
+                    corr,
+                    appliedToDebt.signum() > 0
+                            ? "Deposit confirmed (part used to repay debt: " + appliedToDebt + ")"
+                            : "Deposit confirmed",
+                    EStatus.SUCCESSFUL
+            );
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             log.warn("[DEPOSIT] Duplicate transaction for depositId={}, corrId={}", depositId, corr);
         }
 
         dep.setStatus(EStatus.SUCCESSFUL);
-        log.info("[DEPOSIT] Confirmed depositId={} userId={} amount={} newBalance={}",
-                depositId, user.getId(), amt, user.getBalance());
+        log.info("[DEPOSIT] Confirmed depositId={} userId={} amount={} appliedToDebt={} remainder={} newBalance={}",
+                depositId, user.getId(), amt, appliedToDebt, remainder, user.getBalance());
     }
 
     @Override
@@ -89,19 +137,34 @@ public class DepositServiceImpl implements DepositService{
         BigDecimal amt = Money.s2(wonAmount);
         if (amt.signum() <= 0) throw new IllegalArgumentException("Amount must be > 0");
 
+        Theme theme = null;
+        try {
+            Long id = Long.valueOf(callId);
+            var call = callRepository.findById(id).orElse(null);
+            if (call != null && call.getTheme() != null) {
+                theme = call.getTheme();
+            }
+        } catch (NumberFormatException ignore) {
+
+        }
+
         Long firstId = clientId < interpreterId ? clientId : interpreterId;
         Long secondId = clientId < interpreterId ? interpreterId : clientId;
 
-        User first = userService.findByIdForUpdateOrThrow(firstId);
+        User first  = userService.findByIdForUpdateOrThrow(firstId);
         User second = userService.findByIdForUpdateOrThrow(secondId);
 
         User client = first.getId().equals(clientId) ? first : second;
-        User interp  = first.getId().equals(interpreterId) ? first : second;
+        User interp = first.getId().equals(interpreterId) ? first : second;
 
-        if (client.getAvailable().compareTo(amt) < 0) {
-            log.error("[CALL] Insufficient funds clientId={} balance={} required={}",
-                    clientId, client.getAvailable(), amt);
-            throw new IllegalStateException("Insufficient funds");
+        if (theme != null) {
+            BigDecimal perMinute = getBigDecimal(theme);
+            BigDecimal release = client.getReserved().min(perMinute);
+            if (release.signum() > 0) {
+                client.setReserved(client.getReserved().subtract(release));
+                log.info("Preauth released {} for call {} (clientId={}, themeId={})",
+                        release, callId, client.getId(), theme.getId());
+            }
         }
 
         BigDecimal cBefore = client.getBalance();
@@ -114,9 +177,17 @@ public class DepositServiceImpl implements DepositService{
         txnService.log(interp, TransactionType.CALL_CREDIT, amt, iBefore, interp.getBalance(),
                 callId, "Call payout", EStatus.SUCCESSFUL);
 
+        BigDecimal prevNeg = cBefore.signum() < 0 ? cBefore.abs() : BigDecimal.ZERO;
+        BigDecimal newNeg  = client.getBalance().signum() < 0 ? client.getBalance().abs() : BigDecimal.ZERO;
+        BigDecimal deltaNeg = newNeg.subtract(prevNeg);
+
+        if (deltaNeg.signum() > 0 && debtorService != null) {
+            debtorService.addDebt(client, deltaNeg);
+        }
         log.info("[CALL] Charged clientId={} interpId={} callId={} amount={} clientNewBalance={} interpNewBalance={}",
                 clientId, interpreterId, callId, amt, client.getBalance(), interp.getBalance());
     }
+
 
     @Override
     @Transactional(readOnly = true)

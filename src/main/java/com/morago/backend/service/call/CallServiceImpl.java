@@ -8,9 +8,11 @@ import com.morago.backend.entity.User;
 import com.morago.backend.entity.enumFiles.CallStatus;
 import com.morago.backend.mapper.CallMapper;
 import com.morago.backend.repository.CallRepository;
-import com.morago.backend.repository.UserRepository;
-import com.morago.backend.repository.ThemeRepository;
 import com.morago.backend.exception.ResourceNotFoundException;
+import com.morago.backend.service.debtor.DebtorService;
+import com.morago.backend.service.deposit.DepositService;
+import com.morago.backend.service.theme.ThemeService;
+import com.morago.backend.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -29,32 +31,17 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CallServiceImpl implements CallService {
 
     private final CallRepository callRepository;
-    private final UserRepository userRepository;
-    private final ThemeRepository themeRepository;
+    private final UserService userService;
+    private final ThemeService themeService;
     private final CallMapper mapper;
     private final SimpMessagingTemplate messagingTemplate;
+    private final DepositService depositService;
+    private final DebtorService debtorService;
 
     private final Map<String, Call> activeCalls = new ConcurrentHashMap<>();
 
     private <T> T findOrThrow(java.util.Optional<T> optional, String entityName, Long id) {
         return optional.orElseThrow(() -> new ResourceNotFoundException(entityName + " not found with id " + id));
-    }
-
-    @Override
-    public CallDto createCall(CallDto dto) {
-        Call call = mapper.toEntity(dto);
-
-        if (dto.getCallerId() != null) {
-            call.setCaller(findOrThrow(userRepository.findById(dto.getCallerId()), "User", dto.getCallerId()));
-        }
-        if (dto.getRecipientId() != null) {
-            call.setRecipient(findOrThrow(userRepository.findById(dto.getRecipientId()), "User", dto.getRecipientId()));
-        }
-        if (dto.getThemeId() != null) {
-            call.setTheme(findOrThrow(themeRepository.findById(dto.getThemeId()), "Theme", dto.getThemeId()));
-        }
-
-        return mapper.toDto(callRepository.save(call));
     }
 
     @Override
@@ -81,14 +68,21 @@ public class CallServiceImpl implements CallService {
         call.setEndCall(dto.isEndCall());
         call.setChannelName(dto.getChannelName());
 
-        if (dto.getCallerId() != null) {
-            call.setCaller(findOrThrow(userRepository.findById(dto.getCallerId()), "User", dto.getCallerId()));
+        if (dto.getCallerId() != null
+                && (call.getCaller() == null || !dto.getCallerId().equals(call.getCaller().getId()))) {
+            call.setCaller(userService.findByIdOrThrow(dto.getCallerId()));
         }
-        if (dto.getRecipientId() != null) {
-            call.setRecipient(findOrThrow(userRepository.findById(dto.getRecipientId()), "User", dto.getRecipientId()));
+        if (dto.getRecipientId() != null
+                && (call.getRecipient() == null || !dto.getRecipientId().equals(call.getRecipient().getId()))) {
+            call.setRecipient(userService.findByIdOrThrow(dto.getRecipientId()));
         }
-        if (dto.getThemeId() != null) {
-            call.setTheme(findOrThrow(themeRepository.findById(dto.getThemeId()), "Theme", dto.getThemeId()));
+        if (dto.getThemeId() != null
+                && (call.getTheme() == null || !dto.getThemeId().equals(call.getTheme().getId()))) {
+            var theme = themeService.findByIdOrThrow(dto.getThemeId());
+            if (!theme.isActive()) {
+                throw new IllegalStateException("Theme is inactive");
+            }
+            call.setTheme(theme);
         }
 
         return mapper.toDto(callRepository.save(call));
@@ -104,10 +98,13 @@ public class CallServiceImpl implements CallService {
 
     @Override
     public void initiateCall(Long translatorId, Long themeId, String callerUsername) {
-        User caller = userRepository.findByUsername(callerUsername)
-                .orElseThrow(() -> new ResourceNotFoundException("Caller not found: " + callerUsername));
-        User translator = findOrThrow(userRepository.findById(translatorId), "Translator", translatorId);
-        Theme theme = findOrThrow(themeRepository.findById(themeId), "Theme", themeId);
+        User caller     = userService.findByUsernameOrThrow(callerUsername);
+        User translator = userService.findByIdOrThrow(translatorId);
+        Theme theme     = themeService.findByIdOrThrow(themeId);
+
+        if (!theme.isActive()) {
+            throw new IllegalStateException("Theme is inactive");
+        }
 
         Call call = Call.builder()
                 .caller(caller)
@@ -115,21 +112,32 @@ public class CallServiceImpl implements CallService {
                 .theme(theme)
                 .callStatus(CallStatus.CONNECT_NOT_SET)
                 .build();
-
         call = callRepository.save(call);
 
         String callId = String.valueOf(call.getId());
         call.setChannelName(callId);
         call = callRepository.save(call);
 
+        try {
+            depositService.authorizeCallStartByTheme(caller.getId(), callId, themeId);
+        } catch (RuntimeException e) {
+            call.setCallStatus(CallStatus.MISSED);
+            call.setEndCall(true);
+            callRepository.save(call);
+            log.warn("Call {} preauth failed for user {}: {}", callId, caller.getUsername(), e.getMessage());
+            callRepository.delete(call);
+            return;
+        }
+
         activeCalls.put(callId, call);
 
         CallNotificationMessage notification = CallNotificationMessage.builder()
                 .callId(callId)
+                .channelName(callId)
                 .callerId(caller.getUsername())
-                .callerName(caller.getFirstName() + " " + caller.getLastName())
+                .callerName(fullName(caller))
                 .recipientId(translator.getUsername())
-                .recipientId(translator.getFirstName() + " " + translator.getLastName())
+                .recipientName(fullName(translator))
                 .themeId(themeId)
                 .themeName(theme.getName())
                 .type("INCOMING_CALL")
@@ -167,10 +175,11 @@ public class CallServiceImpl implements CallService {
 
         CallNotificationMessage notification = CallNotificationMessage.builder()
                 .callId(callId)
+                .channelName(call.getChannelName())
                 .type("CALL_ACCEPTED")
                 .status("ACTIVE")
-                .translatorId(translatorUsername)
-                .translatorId(call.getRecipient().getFirstName() + " " + call.getRecipient().getLastName())
+                .recipientId(call.getRecipient().getUsername())
+                .recipientName(fullName(call.getRecipient()))
                 .timestamp(LocalDateTime.now())
                 .build();
 
@@ -204,10 +213,16 @@ public class CallServiceImpl implements CallService {
         call.setCallStatus(CallStatus.MISSED);
         callRepository.save(call);
 
+        debtorService.releasePreauthByCall(callId);
+
         CallNotificationMessage notification = CallNotificationMessage.builder()
                 .callId(callId)
+                .channelName(call.getChannelName())
                 .type("CALL_REJECTED")
                 .status("REJECTED")
+                .recipientId(call.getRecipient().getUsername())
+                .recipientName(fullName(call.getRecipient()))
+                .timestamp(LocalDateTime.now())
                 .build();
 
         messagingTemplate.convertAndSendToUser(
@@ -239,10 +254,15 @@ public class CallServiceImpl implements CallService {
         }
         callRepository.save(call);
 
+        debtorService.releasePreauthByCall(callId);
+
         CallNotificationMessage notification = CallNotificationMessage.builder()
                 .callId(callId)
+                .channelName(call.getChannelName())
                 .type("CALL_ENDED")
                 .status("ENDED")
+                .recipientId(call.getRecipient().getUsername())
+                .recipientName(fullName(call.getRecipient()))
                 .timestamp(LocalDateTime.now())
                 .build();
 
@@ -292,9 +312,7 @@ public class CallServiceImpl implements CallService {
 
     @Override
     public List<CallDto> getCallHistoryForUser(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
-
+        User user = userService.findByUsernameOrThrow(username);
         return callRepository.findByCaller_IdOrRecipient_Id(user.getId(), user.getId())
                 .stream()
                 .map(mapper::toDto)
@@ -320,5 +338,12 @@ public class CallServiceImpl implements CallService {
             log.warn("Invalid callId format: {}", callId);
             return null;
         }
+    }
+
+    private static String fullName(User u) {
+        String fn = u.getFirstName() == null ? "" : u.getFirstName();
+        String ln = u.getLastName()  == null ? "" : u.getLastName();
+        String s = (fn + " " + ln).trim();
+        return s.isEmpty() ? u.getUsername() : s;
     }
 }
