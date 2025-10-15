@@ -78,4 +78,11 @@ public class ThemeServiceImpl implements ThemeService {
                 .map(themeMapper::toDto)
                 .toList();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Theme findByIdOrThrow(Long id) {
+        return themeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Theme not found with id: " + id));
+    }
 }

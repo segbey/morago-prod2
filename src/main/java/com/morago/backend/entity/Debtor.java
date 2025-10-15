@@ -10,7 +10,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -34,13 +33,15 @@ public class Debtor extends Auditable {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @NotBlank
-    @Column(name = "account_holder", length = 200)
+    @Column(name = "account_holder", length = 200, nullable = true)
     private String accountHolder;
 
-    @NotBlank
-    @Column(name = "name_of_bank", length = 200)
+    @Column(name = "name_of_bank", length = 200, nullable = true)
     private String nameOfBank;
+
+    @Column(name = "owed_decimal", nullable = false, precision = 19, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal owedDecimal = java.math.BigDecimal.ZERO;
 
     @Column(name = "is_paid")
     @Builder.Default

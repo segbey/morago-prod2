@@ -52,14 +52,6 @@ public class CallNotificationServiceImpl implements CallNotificationService {
                     message
             );
         }
-
-        if (message.getTranslatorId() != null) {
-            messagingTemplate.convertAndSendToUser(
-                    message.getTranslatorId(),
-                    "/queue/call-notifications",
-                    message
-            );
-        }
     }
 
     @Override

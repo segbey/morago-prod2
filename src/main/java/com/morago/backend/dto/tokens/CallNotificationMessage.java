@@ -14,7 +14,7 @@ public class CallNotificationMessage {
     private String callerId;
     private String callerName;
     private String recipientId;
-    private String translatorId;
+    private String recipientName;
     private String type;
     private String status;
     private Long themeId;
