@@ -6,19 +6,23 @@ import com.morago.backend.entity.Call;
 import com.morago.backend.entity.Theme;
 import com.morago.backend.entity.User;
 import com.morago.backend.entity.enumFiles.CallStatus;
+import com.morago.backend.event.CallEndedEvent;
 import com.morago.backend.mapper.CallMapper;
 import com.morago.backend.repository.CallRepository;
 import com.morago.backend.exception.ResourceNotFoundException;
 import com.morago.backend.service.debtor.DebtorService;
 import com.morago.backend.service.deposit.DepositService;
+import com.morago.backend.service.pricing.PricingService;
 import com.morago.backend.service.theme.ThemeService;
 import com.morago.backend.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +41,8 @@ public class CallServiceImpl implements CallService {
     private final SimpMessagingTemplate messagingTemplate;
     private final DepositService depositService;
     private final DebtorService debtorService;
+    private final PricingService pricing;
+    private final ApplicationEventPublisher publisher;
 
     private final Map<String, Call> activeCalls = new ConcurrentHashMap<>();
 
@@ -253,6 +259,11 @@ public class CallServiceImpl implements CallService {
             call.setCallStatus(CallStatus.SUCCESSFUL);
         }
         callRepository.save(call);
+
+        BigDecimal amountWon = pricing.computeCharge(call);
+        Long clientId      = call.getCaller().getId();
+        Long interpreterId = call.getRecipient().getId();
+        publisher.publishEvent(new CallEndedEvent(clientId, interpreterId, callId, amountWon));
 
         debtorService.releasePreauthByCall(callId);
 

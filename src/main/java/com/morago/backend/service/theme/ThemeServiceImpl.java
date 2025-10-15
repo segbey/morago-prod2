@@ -85,4 +85,14 @@ public class ThemeServiceImpl implements ThemeService {
         return themeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Theme not found with id: " + id));
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ThemeDto> getActiveThemes() {
+        return themeRepository.findAllByIsActiveTrueOrderByNameAsc()
+                .stream()
+                .map(themeMapper::toDto)
+                .toList();
+    }
+
 }

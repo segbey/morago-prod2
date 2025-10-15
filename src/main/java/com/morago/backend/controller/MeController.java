@@ -1,8 +1,10 @@
 package com.morago.backend.controller;
 
 import com.morago.backend.dto.FileResponse;
+import com.morago.backend.dto.ThemeDto;
 import com.morago.backend.dto.password.ChangePasswordRequestDto;
 import com.morago.backend.service.file.FileService;
+import com.morago.backend.service.theme.ThemeService;
 import com.morago.backend.service.user.UserService;
 import com.morago.backend.dto.NotificationDto;
 import com.morago.backend.service.notification.NotificationService;
@@ -32,6 +34,7 @@ public class MeController {
     private final UserService userService;
     private final FileService fileService;
     private final NotificationService notificationService;
+    private final ThemeService themeService;
 
     @Operation(
             summary = "Change password",
@@ -127,5 +130,12 @@ public class MeController {
     public void clearMyNotifications() {
         Long userId = userService.getCurrentUserId();
         notificationService.clearNotificationsForUser(userId);
+    }
+
+    @GetMapping("/themes/active")
+    @PreAuthorize("hasAnyRole('USER','TRANSLATOR','ADMIN')")
+    @Operation(summary = "Get all active themes")
+    public ResponseEntity<List<ThemeDto>> getActiveThemes() {
+        return ResponseEntity.ok(themeService.getActiveThemes());
     }
 }

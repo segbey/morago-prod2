@@ -11,6 +11,7 @@ import com.morago.backend.dto.call.CallDto;
 import com.morago.backend.dto.translator.TranslatorProfileDto;
 import com.morago.backend.dto.user.UserDto;
 import com.morago.backend.service.admin.AdminService;
+import com.morago.backend.service.deposit.DepositService;
 import com.morago.backend.service.file.FileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -27,6 +28,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
+
 @RestController
 @RequestMapping("/admin")
 @PreAuthorize("hasRole('ADMIN')")
@@ -36,6 +39,7 @@ public class AdminController {
 
     private final AdminService adminService;
     private final FileService fileService;
+    private final DepositService depositService;
 
     @GetMapping("/users")
     @Operation(summary = "List all users (paginated)")
@@ -152,6 +156,15 @@ public class AdminController {
     @Operation(summary = "List all calls (paginated)")
     public ResponseEntity<Page<CallDto>> calls(Pageable pageable) {
         return ResponseEntity.ok(adminService.listCalls(pageable));
+    }
+
+    @PatchMapping("/calls/{callId}/settle")
+    public ResponseEntity<Void> settleCall(@PathVariable String callId,
+                                           @RequestParam Long clientId,
+                                           @RequestParam Long interpreterId,
+                                           @RequestParam BigDecimal amountWon) {
+        depositService.chargeCallAndPay(clientId, interpreterId, callId, amountWon);
+        return ResponseEntity.noContent().build();
     }
 
 

@@ -12,4 +12,5 @@ public interface ThemeService {
     ThemeDto getById(Long id);
     List<ThemeDto> getAll();
     Theme findByIdOrThrow(Long id);
+    List<ThemeDto> getActiveThemes();
 }
