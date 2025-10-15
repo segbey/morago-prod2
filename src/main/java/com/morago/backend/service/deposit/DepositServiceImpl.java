@@ -1,5 +1,6 @@
 package com.morago.backend.service.deposit;
 
+import com.morago.backend.config.utils.ThemePriceUtil;
 import com.morago.backend.entity.Deposit;
 import com.morago.backend.entity.Money;
 import com.morago.backend.entity.Theme;
@@ -158,7 +159,7 @@ public class DepositServiceImpl implements DepositService{
         User interp = first.getId().equals(interpreterId) ? first : second;
 
         if (theme != null) {
-            BigDecimal perMinute = getBigDecimal(theme);
+            BigDecimal perMinute = ThemePriceUtil.perMinute(theme);
             BigDecimal release = client.getReserved().min(perMinute);
             if (release.signum() > 0) {
                 client.setReserved(client.getReserved().subtract(release));
