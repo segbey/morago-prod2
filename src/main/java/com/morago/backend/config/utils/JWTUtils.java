@@ -15,7 +15,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
-import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -138,11 +137,5 @@ public class JWTUtils {
         if (token == null) return null;
         token = token.trim();
         return token.regionMatches(true, 0, "Bearer ", 0, 7) ? token.substring(7).trim() : token;
-    }
-
-    public Instant getExpirationInstant(String token, TokenType type) {
-        Claims c = parse(token, type);
-        Date exp = c.getExpiration();
-        return exp.toInstant();
     }
 }

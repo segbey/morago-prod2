@@ -38,6 +38,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
         registry.addEndpoint("/ws-native")
                 .addInterceptors(jwtHandshakeInterceptor)
+                .setHandshakeHandler(customHandshakeHandler)
                 .setAllowedOriginPatterns("*");
     }
 

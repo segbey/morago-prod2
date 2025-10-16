@@ -38,6 +38,8 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
             jwtUtils.validateToken(token, TokenType.ACCESS);
 
             String username = jwtUtils.getUsernameFromToken(token, TokenType.ACCESS);
+            Long userId = jwtUtils.getUserIdFromToken(token, TokenType.ACCESS);
+            String role = jwtUtils.getRoleFromToken(token, TokenType.ACCESS);
 
             if (username == null || username.isBlank()) {
                 log.warn("Invalid username in JWT token");
@@ -46,6 +48,8 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
 
             attributes.put("username", username);
             attributes.put("token", token);
+            attributes.put("userId", userId);
+            attributes.put("role", role);
 
             log.info("WebSocket handshake successful for user: {}", username);
             return true;
@@ -73,7 +77,7 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
                 String[] params = queryString.split("&");
                 for (String param : params) {
                     if (param.startsWith("token=")) {
-                        String token = param.substring(6); // Remove "token="
+                        String token = param.substring(6);
                         return java.net.URLDecoder.decode(token, java.nio.charset.StandardCharsets.UTF_8);
                     }
                 }
