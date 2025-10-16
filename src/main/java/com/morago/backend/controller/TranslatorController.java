@@ -1,10 +1,9 @@
 package com.morago.backend.controller;
-
 import com.morago.backend.dto.translator.TranslatorProfileDto;
-import com.morago.backend.dto.user.UserUpdateProfileRequestDto;
-import com.morago.backend.dto.user.UserUpdateProfileResponseDto;
+import com.morago.backend.mapper.WithdrawalMapper;
 import com.morago.backend.service.profile.TranslatorProfileService;
 import com.morago.backend.service.user.UserService;
+import com.morago.backend.service.withdrawal.WithdrawalService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
@@ -14,7 +13,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
@@ -78,36 +76,11 @@ public class TranslatorController {
         return translatorProfileService.getTranslatorsByLanguage(languageId);
     }
 
-    @Operation(
-            summary = "Get translator by ID",
-            description = "Get a specific translator's profile.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Translator retrieved successfully"),
-                    @ApiResponse(responseCode = "404", description = "Translator not found")
-            }
-    )
+    @Operation(summary = "Get translator by ID", description = "Get a specific translator's profile.")
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or @authz.isSelf(#id)")
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
     public ResponseEntity<TranslatorProfileDto> getTranslatorById(@PathVariable Long id) {
-        return ResponseEntity.ok(translatorProfileService.getById(id));
+        TranslatorProfileDto dto = translatorProfileService.getById(id);
+        return ResponseEntity.ok(dto);
     }
-
-    @Operation(
-            summary = "Update my profile",
-            description = "Update currently logged-in user's profile. Accessible to USER, TRANSLATOR, and ADMIN.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Profile updated successfully"),
-                    @ApiResponse(responseCode = "400", description = "Invalid request data"),
-                    @ApiResponse(responseCode = "403", description = "Forbidden")
-            }
-    )
-    @PutMapping("/me")
-    @PreAuthorize("hasAnyRole('USER','TRANSLATOR','ADMIN')")
-    public ResponseEntity<UserUpdateProfileResponseDto> updateMyProfile(
-            @Valid @RequestBody UserUpdateProfileRequestDto dto
-    ) {
-        return ResponseEntity.ok(userService.updateMyProfile(dto));
-    }
-
-
 }

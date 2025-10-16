@@ -138,4 +138,27 @@ public class JWTUtils {
         token = token.trim();
         return token.regionMatches(true, 0, "Bearer ", 0, 7) ? token.substring(7).trim() : token;
     }
+    public Long getUserIdFromToken(String token, TokenType type) {
+        Claims claims = parse(token, type);
+        Object sub = claims.getSubject();
+        try {
+            return Long.valueOf(sub.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    public String getRoleFromToken(String token, TokenType type) {
+        Claims claims = parse(token, type);
+        Object roles = claims.get("roles");
+        if (roles instanceof List<?> list && !list.isEmpty()) {
+            Object first = list.get(0);
+            if (first instanceof String s) return s;
+        }
+        return null;
+    }
+
+
+
+
 }

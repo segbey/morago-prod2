@@ -1,4 +1,5 @@
 package com.morago.backend.config;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.server.ServerHttpRequest;
@@ -12,7 +13,6 @@ public class CustomHandshakeHandler extends DefaultHandshakeHandler {
 
     private static final Logger log = LoggerFactory.getLogger(CustomHandshakeHandler.class);
 
-
     @Override
     protected Principal determineUser(ServerHttpRequest request,
                                       WebSocketHandler wsHandler,
@@ -22,18 +22,21 @@ public class CustomHandshakeHandler extends DefaultHandshakeHandler {
         String username = (String) attributes.get("username");
         String role = (String) attributes.get("role");
 
-        if (userId != null && username != null) {
+        if (userId != null && username != null && role != null) {
+            log.info("Creating UserPrincipal for user: {} with role: {}", username, role);
             return new UserPrincipal(userId, username, role);
         }
-        if (username == null || username.isBlank()) {
-            log.warn("No username found in handshake attributes");
-            return null;
+
+        if (username != null && !username.isBlank()) {
+            log.info("Creating StompPrincipal fallback for user: {}", username);
+            return new StompPrincipal(username);
         }
 
-        log.info("Creating Principal for user: {}", username);
+        log.warn("No valid username found in handshake attributes");
+        return null;
+    }
 
-        return new StompPrincipal(username);
-    }  private record StompPrincipal(String name) implements Principal {
+    private record StompPrincipal(String name) implements Principal {
         @Override
         public String getName() {
             return name;

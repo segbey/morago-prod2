@@ -29,7 +29,7 @@ public class WithdrawalController {
     private final WithdrawalService withdrawalService;
     private final WithdrawalMapper withdrawalMapper;
 
-    @Operation(
+   /* @Operation(
             summary = "Request withdrawal",
             description = "Access: [USER, TRANSLATOR]\nSubmit a new withdrawal request."
     )
@@ -44,7 +44,7 @@ public class WithdrawalController {
         );
         var w = withdrawalService.findByIdOrThrow(id);
         return ResponseEntity.ok(withdrawalMapper.toDto(w));
-    }
+    }*/
 
     @Operation(
             summary = "Decide withdrawal",

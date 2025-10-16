@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -131,7 +132,6 @@ public class FileServiceImpl implements FileService {
         var me = userService.getCurrentUser();
         return uploadTranslatorDoc(me.getId(), mf);
     }
-    // --- helpers ---
 
     private StorageService.StoredObject store(MultipartFile mf, String key, boolean isPublic) {
         try {
@@ -161,4 +161,11 @@ public class FileServiceImpl implements FileService {
         int i = name.lastIndexOf('.');
         return (i > 0 && i < name.length() - 1) ? name.substring(i + 1) : "bin";
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<File> findByUserIdAndCategory(Long userId, FileCategory category) {
+        return fileRepo.findByUserIdAndCategory(userId, category);
+    }
+
 }

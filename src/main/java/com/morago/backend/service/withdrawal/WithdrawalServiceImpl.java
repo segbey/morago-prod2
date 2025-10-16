@@ -1,15 +1,21 @@
 package com.morago.backend.service.withdrawal;
 
+import com.morago.backend.dto.billing.withdrawal.CreateWithdrawalRequest;
+import com.morago.backend.dto.billing.withdrawal.WithdrawalDto;
 import com.morago.backend.entity.Money;
 import com.morago.backend.entity.User;
 import com.morago.backend.entity.Withdrawal;
 import com.morago.backend.entity.enumFiles.EStatus;
 import com.morago.backend.entity.enumFiles.TransactionType;
 import com.morago.backend.exception.WithdrawalNotFoundException;
+import com.morago.backend.mapper.WithdrawalMapper;
+import com.morago.backend.repository.UserRepository;
 import com.morago.backend.repository.WithdrawalRepository;
 import com.morago.backend.service.transaction.TransactionService;
 import com.morago.backend.service.user.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +28,8 @@ public class WithdrawalServiceImpl implements WithdrawalService {
     private final WithdrawalRepository withdrawalRepo;
     private final UserService userService;
     private final TransactionService txnService;
+    private final UserRepository userRepository;
+    private final WithdrawalMapper withdrawalMapper;
 
     @Override
     public Long requestWithdrawal(Long userId, String accountNumber, String holder, String bank, BigDecimal wonAmount) {
@@ -62,7 +70,8 @@ public class WithdrawalServiceImpl implements WithdrawalService {
 
     @Override
     public void decideWithdrawal(Long withdrawalId, boolean approve, String adminNote) {
-        Withdrawal w = withdrawalRepo.findById(withdrawalId).orElseThrow();
+        Withdrawal w = withdrawalRepo.findById(withdrawalId)
+                .orElseThrow(() -> new WithdrawalNotFoundException(withdrawalId));
         if (w.getStatus() != EStatus.PENDING) return;
 
         User u = userService.findByIdOrThrow(w.getUser().getId());
@@ -116,4 +125,21 @@ public class WithdrawalServiceImpl implements WithdrawalService {
         return withdrawalRepo.findById(id)
                 .orElseThrow(() -> new WithdrawalNotFoundException(id));
     }
+
+
+    @Override
+    public WithdrawalDto createWithdrawalRequestForTranslator(CreateWithdrawalRequest requestDto) {
+        Long withdrawalId = this.requestWithdrawal(
+                requestDto.userId(),
+                requestDto.accountNumber(),
+                requestDto.accountHolder(),
+                requestDto.nameOfBank(),
+                requestDto.wonAmount()
+        );
+
+        Withdrawal newWithdrawal = findByIdOrThrow(withdrawalId);
+        return withdrawalMapper.toDto(newWithdrawal);
+    }
+
+
 }

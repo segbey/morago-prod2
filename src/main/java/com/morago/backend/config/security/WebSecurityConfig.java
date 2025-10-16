@@ -50,7 +50,7 @@ public class WebSecurityConfig {
     };
 
     private static final String[] WS_WHITELIST = {
-            "/ws/**"
+            "/ws/**", "/ws-native/**"
     };
 
     private static final String[] CORS_WHITELIST = {
@@ -90,6 +90,7 @@ public class WebSecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/translators/*/rating").authenticated()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/translators/**").hasAnyRole("TRANSLATOR", "ADMIN", "USER")
+
 
 
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()

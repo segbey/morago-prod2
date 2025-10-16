@@ -1,5 +1,7 @@
 package com.morago.backend.service.profile;
 
+import com.morago.backend.dto.ThemeDto;
+import com.morago.backend.dto.billing.withdrawal.CreateWithdrawalRequest;
 import com.morago.backend.dto.translator.TranslatorProfileDto;
 import com.morago.backend.entity.Language;
 import com.morago.backend.entity.Theme;
@@ -7,11 +9,15 @@ import com.morago.backend.entity.TranslatorProfile;
 import com.morago.backend.entity.User;
 import com.morago.backend.exception.ResourceNotFoundException;
 import com.morago.backend.exception.rating.SelfRatingNotAllowedException;
+import com.morago.backend.mapper.ThemeMapper;
 import com.morago.backend.mapper.TranslatorProfileMapper;
 import com.morago.backend.repository.LanguageRepository;
 import com.morago.backend.repository.ThemeRepository;
 import com.morago.backend.repository.TranslatorProfileRepository;
 import com.morago.backend.repository.UserRepository;
+import com.morago.backend.service.file.FileService;
+import com.morago.backend.service.user.UserService;
+import com.morago.backend.service.withdrawal.WithdrawalService;
 import io.micrometer.common.lang.Nullable;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,6 +26,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Set;
@@ -35,6 +42,11 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
     private final LanguageRepository languageRepo;
     private final ThemeRepository themeRepo;
     private final TranslatorProfileMapper mapper;
+    private final ThemeMapper themeMapper;
+    private final FileService fileService;
+    private final WithdrawalService withdrawalService;
+    private final UserService userService;
+
     private static final Set<String> ALLOWED_SORTS =
             Set.of("id", "ratingAvg", "ratingCount", "createdAt");
 
@@ -77,38 +89,59 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
     @Override
     @Transactional(readOnly = true)
     public TranslatorProfileDto getById(Long id) {
-        return profileRepo.findById(id)
-                .map(mapper::toDto)
+        TranslatorProfile profile = profileRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
+        TranslatorProfileDto dto = mapper.toDto(profile);
+        fileService.findByUserIdAndCategory(profile.getUser().getId(), com.morago.backend.entity.enumFiles.FileCategory.AVATAR)
+                .ifPresent(file -> dto.setAvatarUrl(file.getPath()));
+        return dto;
     }
 
     @Override
     @Transactional(readOnly = true)
     public TranslatorProfileDto getByUserId(Long userId) {
-        return profileRepo.findByUserId(userId)
-                .map(mapper::toDto)
+        TranslatorProfile profile = profileRepo.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Translator profile not found for user: " + userId));
+        TranslatorProfileDto dto = mapper.toDto(profile);
+        fileService.findByUserIdAndCategory(userId, com.morago.backend.entity.enumFiles.FileCategory.AVATAR)
+                .ifPresent(file -> dto.setAvatarUrl(file.getPath()));
+        return dto;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<TranslatorProfileDto> getAll() {
         return profileRepo.findAll().stream()
-                .map(mapper::toDto)
+                .map(profile -> {
+                    TranslatorProfileDto dto = mapper.toDto(profile);
+                    fileService.findByUserIdAndCategory(profile.getUser().getId(), com.morago.backend.entity.enumFiles.FileCategory.AVATAR)
+                            .ifPresent(file -> dto.setAvatarUrl(file.getPath()));
+                    return dto;
+                })
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<TranslatorProfileDto> getAll(Pageable pageable) {
-        return profileRepo.findAll(pageable).map(mapper::toDto);
+        return profileRepo.findAll(pageable).map(profile -> {
+            TranslatorProfileDto dto = mapper.toDto(profile);
+            fileService.findByUserIdAndCategory(profile.getUser().getId(), com.morago.backend.entity.enumFiles.FileCategory.AVATAR)
+                    .ifPresent(file -> dto.setAvatarUrl(file.getPath()));
+            return dto;
+        });
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<TranslatorProfileDto> getOnlineTranslators() {
         return profileRepo.findByIsOnlineTrue().stream()
-                .map(mapper::toDto)
+                .map(profile -> {
+                    TranslatorProfileDto dto = mapper.toDto(profile);
+                    fileService.findByUserIdAndCategory(profile.getUser().getId(), com.morago.backend.entity.enumFiles.FileCategory.AVATAR)
+                            .ifPresent(file -> dto.setAvatarUrl(file.getPath()));
+                    return dto;
+                })
                 .toList();
     }
 
@@ -116,7 +149,12 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
     @Transactional(readOnly = true)
     public List<TranslatorProfileDto> getTranslatorsByTheme(Long themeId) {
         return profileRepo.findByThemes_Id(themeId).stream()
-                .map(mapper::toDto)
+                .map(profile -> {
+                    TranslatorProfileDto dto = mapper.toDto(profile);
+                    fileService.findByUserIdAndCategory(profile.getUser().getId(), com.morago.backend.entity.enumFiles.FileCategory.AVATAR)
+                            .ifPresent(file -> dto.setAvatarUrl(file.getPath()));
+                    return dto;
+                })
                 .toList();
     }
 
@@ -124,11 +162,16 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
     @Transactional(readOnly = true)
     public List<TranslatorProfileDto> getTranslatorsByLanguage(Long languageId) {
         return profileRepo.findByLanguages_Id(languageId).stream()
-                .map(mapper::toDto)
+                .map(profile -> {
+                    TranslatorProfileDto dto = mapper.toDto(profile);
+                    fileService.findByUserIdAndCategory(profile.getUser().getId(), com.morago.backend.entity.enumFiles.FileCategory.AVATAR)
+                            .ifPresent(file -> dto.setAvatarUrl(file.getPath()));
+                    return dto;
+                })
                 .toList();
     }
 
-    @Transactional
+    @Override
     public void setOnlineStatus(User user, boolean online) {
         profileRepo.findByUser(user).ifPresent(profile -> {
             profile.setIsOnline(online);
@@ -143,7 +186,7 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("Translator not found"));
 
         if (translator.getUser() != null && translator.getUser().getId().equals(currentUserId)) {
-            throw new SelfRatingNotAllowedException(); // 403, RATING_SELF_NOT_ALLOWED
+            throw new SelfRatingNotAllowedException();
         }
         return translator;
     }
@@ -166,7 +209,12 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
 
         return profileRepo.searchByLanguagesThemeAndFlags(
                         languageIds, themeId, online, verified, required, safe)
-                .map(mapper::toDto);
+                .map(profile -> {
+                    TranslatorProfileDto dto = mapper.toDto(profile);
+                    fileService.findByUserIdAndCategory(profile.getUser().getId(), com.morago.backend.entity.enumFiles.FileCategory.AVATAR)
+                            .ifPresent(file -> dto.setAvatarUrl(file.getPath()));
+                    return dto;
+                });
     }
 
     private Pageable sanitize(Pageable p) {
@@ -183,5 +231,91 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
             safeSort = Sort.by(Sort.Order.desc("ratingAvg"), Sort.Order.desc("ratingCount"));
         }
         return PageRequest.of(p.getPageNumber(), p.getPageSize(), safeSort);
+    }
+
+    @Override
+    public void updateTranslatorStatus(Long userId, Boolean isOnline) {
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        TranslatorProfile profile = profileRepo.findByUser(user)
+                .orElseThrow(() -> new ResourceNotFoundException("Translator profile not found for user: " + userId));
+
+        profile.setIsOnline(isOnline);
+        profileRepo.save(profile);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ThemeDto> getMyThemes(Long userId) {
+        TranslatorProfile profile = profileRepo.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Translator profile not found for user: " + userId));
+        return profile.getThemes().stream()
+                .map(themeMapper::toDto)
+                .toList();
+    }
+
+    @Override
+    public void updateMyThemes(Long userId, Set<Long> themeIds) {
+        TranslatorProfile profile = profileRepo.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Translator profile not found for user: " + userId));
+
+        Set<Theme> newThemes = themeIds.stream()
+                .map(id -> themeRepo.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("Theme not found with ID: " + id)))
+                .collect(Collectors.toSet());
+
+        profile.setThemes(newThemes);
+        profileRepo.save(profile);
+    }
+
+    @Override
+    public String updateMyAvatar(Long userId, MultipartFile avatarFile) {
+        return fileService.uploadAvatar(userId, avatarFile).getUrl();
+    }
+
+    @Override
+    public Long requestTranslatorWithdrawal(Long userId, CreateWithdrawalRequest dto) {
+        return withdrawalService.requestWithdrawal(
+                userId,
+                dto.accountNumber(),
+                dto.accountHolder(),
+                dto.nameOfBank(),
+                dto.wonAmount()
+        );
+    }
+
+    @Override
+    public void changeStatus(boolean isOnline) {
+        User currentUser = userService.getCurrentUser();
+        TranslatorProfile profile = profileRepo.findByUserId(currentUser.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Translator profile not found for current user"));
+        profile.setIsOnline(isOnline);
+        profileRepo.save(profile);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ThemeDto> getAvailableThemes() {
+        return themeRepo.findAll().stream()
+                .map(themeMapper::toDto)
+                .toList();
+    }
+
+    @Override
+    public void updateMyThemes(List<Long> themeIds) {
+        User currentUser = userService.getCurrentUser();
+        TranslatorProfile profile = profileRepo.findByUserId(currentUser.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Translator profile not found for current user"));
+        Set<Theme> newThemes = themeIds.stream()
+                .map(id -> themeRepo.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("Theme not found with ID: " + id)))
+                .collect(Collectors.toSet());
+        profile.setThemes(newThemes);
+        profileRepo.save(profile);
+    }
+
+    @Override
+    public void updateAvatar(String avatarUrl) {
+        throw new UnsupportedOperationException("Updating avatar by URL is not supported. Please use the file upload endpoint.");
     }
 }
