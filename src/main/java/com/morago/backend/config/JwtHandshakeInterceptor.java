@@ -10,7 +10,7 @@ import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
 import com.morago.backend.config.utils.JWTUtils;
 import java.util.Map;
-
+import java.util.Set;
 
 
 @Slf4j
@@ -39,8 +39,7 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
 
             String username = jwtUtils.getUsernameFromToken(token, TokenType.ACCESS);
             Long userId = jwtUtils.getUserIdFromToken(token, TokenType.ACCESS);
-            String role = jwtUtils.getRoleFromToken(token, TokenType.ACCESS);
-
+            Set<String> roles = jwtUtils.getRolesFromToken(token, TokenType.ACCESS);
             if (username == null || username.isBlank()) {
                 log.warn("Invalid username in JWT token");
                 return false;
@@ -49,7 +48,7 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
             attributes.put("username", username);
             attributes.put("token", token);
             attributes.put("userId", userId);
-            attributes.put("role", role);
+            attributes.put("roles", roles);
 
             log.info("WebSocket handshake successful for user: {}", username);
             return true;
