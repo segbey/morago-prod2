@@ -8,6 +8,9 @@ import com.morago.backend.entity.User;
 import com.morago.backend.entity.enumFiles.EStatus;
 import com.morago.backend.entity.enumFiles.TransactionType;
 import com.morago.backend.exception.DepositNotFoundException;
+import com.morago.backend.exception.call.InsufficientFundsToStartCallException;
+import com.morago.backend.exception.call.InvalidCallAmountException;
+import com.morago.backend.exception.deposit.InvalidDepositAmountException;
 import com.morago.backend.repository.CallRepository;
 import com.morago.backend.repository.DepositRepository;
 import com.morago.backend.service.debtor.DebtorService;
@@ -20,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalTime;
 
 @Slf4j
 @Service
@@ -37,33 +39,32 @@ public class DepositServiceImpl implements DepositService{
     @Transactional
     public void authorizeCallStartByTheme(Long clientId, String callId, Long themeId) {
         Theme theme = themeService.findByIdOrThrow(themeId);
-        boolean night = LocalTime.now().isAfter(LocalTime.of(22,0)) || LocalTime.now().isBefore(LocalTime.of(7,0));
-        BigDecimal base = theme.getPrice();
-        if (base == null) throw new IllegalStateException("Theme price is not set");
-        BigDecimal nightPrice = theme.getNightPrice();
-        BigDecimal perMinute = Money.s2(night && nightPrice != null ? nightPrice : base);
 
-        if (perMinute.signum() <= 0) {
-            throw new IllegalArgumentException("Theme per-minute price must be > 0");
-        }
+        BigDecimal perMinute = ThemePriceUtil.perMinute(theme);
 
         User client = userService.findByIdForUpdateOrThrow(clientId);
 
         if (client.getAvailable().compareTo(perMinute) < 0) {
-            throw new IllegalStateException("Insufficient funds to start a call (need >= 1 minute)");
+            throw new InsufficientFundsToStartCallException(
+                    client.getId(), themeId, callId, perMinute, client.getAvailable()
+            );
         }
 
         client.setReserved(client.getReserved().add(perMinute));
 
-        log.info("Preauth reserved {} for call {} (clientId={}, themeId={})", perMinute, callId, clientId, themeId);
+        log.info("Preauth reserved {} for call {} (clientId={}, themeId={})",
+                perMinute, callId, clientId, themeId);
     }
 
     @Override
     @Transactional
     public Long createDeposit(Long userId, String accountHolder, String nameOfBank, BigDecimal wonAmount) {
+        if (wonAmount == null) {
+            throw new InvalidDepositAmountException(userId, null);
+        }
         BigDecimal amt = Money.s2(wonAmount);
-        if (amt.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Amount must be > 0");
+        if (amt.signum() <= 0) {
+            throw new InvalidDepositAmountException(userId, wonAmount);
         }
 
         User user = userService.findByIdOrThrow(userId);
@@ -91,8 +92,14 @@ public class DepositServiceImpl implements DepositService{
             return;
         }
 
-        BigDecimal amt = Money.s2(dep.getWonDecimal());
-        if (amt.signum() <= 0) throw new IllegalArgumentException("Amount must be > 0");
+        BigDecimal original = dep.getWonDecimal();
+        if (original == null) {
+            throw new InvalidDepositAmountException(dep.getUser().getId(), null);
+        }
+        BigDecimal amt = Money.s2(original);
+        if (amt.signum() <= 0) {
+            throw new InvalidDepositAmountException(dep.getUser().getId(), original);
+        }
 
         User user = userService.findByIdForUpdateOrThrow(dep.getUser().getId());
 
@@ -134,9 +141,13 @@ public class DepositServiceImpl implements DepositService{
             log.warn("[CALL] Duplicate call charge detected, callId={}", callId);
             return;
         }
-
+        if (wonAmount == null) {
+            throw new InvalidCallAmountException(clientId, interpreterId, callId, null);
+        }
         BigDecimal amt = Money.s2(wonAmount);
-        if (amt.signum() <= 0) throw new IllegalArgumentException("Amount must be > 0");
+        if (amt.signum() <= 0) {
+            throw new InvalidCallAmountException(clientId, interpreterId, callId, wonAmount);
+        }
 
         Theme theme = null;
         try {

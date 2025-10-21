@@ -246,34 +246,11 @@ public class UserServiceImpl implements UserService {
         validatePasswordStrength(pwd);
     }
 
-
-    //CHANGE IT AS ADMIN'S PART
-    @Override
-    @PreAuthorize("hasRole('ADMIN')")
-    @Transactional
-    public UserRegistrationResponseDto createUser(UserRegistrationRequestDto dto) {
-//        if (userRepository.existsByUsername(dto.getUsername())) {
-//            throw new IllegalArgumentException("Username already exists");
-//        }
-//        User user = userMapper.toEntity(dto);
-//
-//        if (dto.getPassword() == null || dto.getPassword().isBlank()) {
-//            throw new IllegalArgumentException("Password is required for new user");
-//        }
-//        user.setPassword(passwordEncoder.encode(dto.getPassword()));
-
-//        user.setRoles(resolveRoles(dto.getRoles()));
-
-//        return userMapper.toResponseDto(userRepository.save(user));
-        return null;
-    }
-
     @Override
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void deleteUser(Long id) {
         User user = findByIdOrThrow(id);
-        //   userRepository.deleteById(id);
         refreshTokenRepository.deleteByUser(user);
         userRepository.delete(user);
     }

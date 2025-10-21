@@ -33,11 +33,4 @@ public class UserProfileServiceImpl implements UserProfileService {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("UserProfile not found for userId " + userId));
     }
-
-    @Override
-    @PreAuthorize("hasRole('ADMIN')")
-    public List<UserProfileDto> getAllUserProfiles() {
-//        return userProfileRepository.findAll().stream().map(mapper::toDto).toList();
-        return null;
-    }
 }

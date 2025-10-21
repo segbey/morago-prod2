@@ -8,5 +8,4 @@ import java.util.List;
 public interface UserProfileService {
     UserProfile findByIdOrThrow(Long profileId);
     UserProfile findByUserIdOrThrow(Long userId);
-    List<UserProfileDto> getAllUserProfiles();
 }
