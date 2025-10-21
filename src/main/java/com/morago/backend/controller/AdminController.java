@@ -11,10 +11,17 @@ import com.morago.backend.dto.call.CallDto;
 import com.morago.backend.dto.translator.TranslatorProfileDto;
 import com.morago.backend.dto.user.UserDto;
 import com.morago.backend.service.admin.AdminService;
+import com.morago.backend.service.category.CategoryService;
 import com.morago.backend.service.deposit.DepositService;
 import com.morago.backend.service.file.FileService;
+import com.morago.backend.service.language.LanguageService;
+import com.morago.backend.service.theme.ThemeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Encoding;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -40,6 +47,9 @@ public class AdminController {
     private final AdminService adminService;
     private final FileService fileService;
     private final DepositService depositService;
+    private final CategoryService categoryService;
+    private final ThemeService themeService;
+    private final LanguageService languageService;
 
     @GetMapping("/users")
     @Operation(summary = "List all users (paginated)")
@@ -54,7 +64,6 @@ public class AdminController {
     }
 
     @PostMapping(value = "/users", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Create a user (admin) with optional avatar upload")
     public ResponseEntity<UserDto> createUser(
             @RequestPart("user") @Valid AdminUserDto req,
             @RequestPart(value = "avatar", required = false) MultipartFile avatar
@@ -197,7 +206,7 @@ public class AdminController {
     @GetMapping("/themes")
     public ResponseEntity<Page<ThemeDto>> listThemes(@PageableDefault(size = 20) Pageable pageable,
                                                      @RequestParam(required = false) String q) {
-        return ResponseEntity.ok(adminService.listThemes(pageable, q));
+        return ResponseEntity.ok(themeService.listThemes(pageable, q));
     }
 
     @PostMapping(value = "/themes", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -206,7 +215,7 @@ public class AdminController {
             @RequestPart("theme") @Valid ThemeDto dto,
             @RequestPart(value = "icon", required = false) MultipartFile icon
     ) {
-        return ResponseEntity.ok(adminService.createTheme(dto, icon));
+        return ResponseEntity.ok(themeService.createTheme(dto, icon));
     }
 
     @PutMapping(value = "/themes/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -216,50 +225,39 @@ public class AdminController {
             @RequestPart("theme") @Valid ThemeDto dto,
             @RequestPart(value = "icon", required = false) MultipartFile icon
     ) {
-        return ResponseEntity.ok(adminService.updateTheme(id, dto, icon));
+        return ResponseEntity.ok(themeService.updateTheme(id, dto, icon));
     }
 
-//    @PostMapping("/themes")
-//    @Operation(summary = "Create a new theme")
-//    public ResponseEntity<ThemeDto> createTheme(@Valid @RequestBody ThemeDto dto) {
-//        return ResponseEntity.ok(adminService.createTheme(dto));
-//    }
-//
-//    @PutMapping("/themes/{id}")
-//    @Operation(summary = "Update a theme")
-//    public ResponseEntity<ThemeDto> updateTheme(@PathVariable Long id, @Valid @RequestBody ThemeDto dto) {
-//        return ResponseEntity.ok(adminService.updateTheme(id, dto));
-//    }
 
     @DeleteMapping("/themes/{id}")
     @Operation(summary = "Delete a theme")
     public ResponseEntity<Void> deleteTheme(@PathVariable Long id) {
-        adminService.deleteTheme(id);
+        themeService.deleteTheme(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/categories")
     public ResponseEntity<Page<CategoryDto>> listCategories(@PageableDefault(size = 20) Pageable pageable,
                                                             @RequestParam(required = false) String q) {
-        return ResponseEntity.ok(adminService.listCategories(pageable, q));
+        return ResponseEntity.ok(categoryService.listCategories(pageable, q));
     }
 
     @PostMapping("/categories")
     @Operation(summary = "Create a new category")
     public ResponseEntity<?> createCategory(@RequestBody String categoryName) {
-        return ResponseEntity.status(201).body(adminService.createCategory(categoryName));
+        return ResponseEntity.status(201).body(categoryService.createCategory(categoryName));
     }
 
     @PutMapping("/categories/{id}")
     @Operation(summary = "Update a category")
     public ResponseEntity<?> updateCategory(@PathVariable Long id, @RequestBody String categoryName) {
-        return ResponseEntity.ok(adminService.updateCategory(id, categoryName));
+        return ResponseEntity.ok(categoryService.updateCategory(id, categoryName));
     }
 
     @DeleteMapping("/categories/{id}")
     @Operation(summary = "Delete a category")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
-        adminService.deleteCategory(id);
+        categoryService.deleteCategory(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -295,26 +293,26 @@ public class AdminController {
             @PageableDefault(size = 20) Pageable pageable,
             @RequestParam(required = false) String q
     ) {
-        return ResponseEntity.ok(adminService.listLanguages(pageable, q));
+        return ResponseEntity.ok(languageService.listLanguages(pageable, q));
     }
 
     @PostMapping("/languages")
     @io.swagger.v3.oas.annotations.Operation(summary = "Create a language")
     public ResponseEntity<LanguageDto> createLanguage(@RequestBody @jakarta.validation.Valid LanguageDto dto) {
-        return ResponseEntity.ok(adminService.createLanguage(dto));
+        return ResponseEntity.ok(languageService.createLanguage(dto));
     }
 
     @PutMapping("/languages/{id}")
     @io.swagger.v3.oas.annotations.Operation(summary = "Update a language")
     public ResponseEntity<LanguageDto> updateLanguage(@PathVariable Long id,
                                                       @RequestBody @jakarta.validation.Valid LanguageDto dto) {
-        return ResponseEntity.ok(adminService.updateLanguage(id, dto));
+        return ResponseEntity.ok(languageService.updateLanguage(id, dto));
     }
 
     @DeleteMapping("/languages/{id}")
     @io.swagger.v3.oas.annotations.Operation(summary = "Delete a language (409 if in use)")
     public ResponseEntity<Void> deleteLanguage(@PathVariable Long id) {
-        adminService.deleteLanguage(id);
+        languageService.deleteLanguage(id);
         return ResponseEntity.noContent().build();
     }
 

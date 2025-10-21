@@ -6,7 +6,10 @@ import com.morago.backend.exception.ResourceNotFoundException;
 import com.morago.backend.mapper.CategoryMapper;
 import com.morago.backend.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -14,41 +17,39 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
 
-    private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
+    private final CategoryRepository categoryRepository;
 
-    private Category getEntityOrThrow(Long id) {
-        return categoryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found with id " + id));
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CategoryDto> listCategories(Pageable pageable, String q) {
+        if (q != null && !q.isBlank()) {
+            return categoryRepository.findByNameContainingIgnoreCase(q.trim(), pageable)
+                    .map(categoryMapper::toDto);
+        }
+        return categoryRepository.findAll(pageable).map(categoryMapper::toDto);
     }
 
     @Override
-    public CategoryDto create(CategoryDto categoryDto) {
-        Category category = categoryMapper.toEntity(categoryDto);
-        return categoryMapper.toDto(categoryRepository.save(category));
+    @Transactional
+    public Object createCategory(String name) {
+        var category = new com.morago.backend.entity.Category();
+        category.setName(name);
+        return categoryRepository.save(category);
     }
 
     @Override
-    public CategoryDto update(Long id, CategoryDto categoryDto) {
-        Category existing = getEntityOrThrow(id);
-        existing.setName(categoryDto.getName());
-        existing.setActive(categoryDto.getActive());
-        return categoryMapper.toDto(categoryRepository.save(existing));
+    @Transactional
+    public Object updateCategory(Long id, String name) {
+        var category = categoryRepository.findById(id).orElseThrow(() -> new RuntimeException("Category not found: " + id));
+        category.setName(name);
+        return categoryRepository.save(category);
     }
 
     @Override
-    public void delete(Long id) {
-        Category existing = getEntityOrThrow(id);
-        categoryRepository.delete(existing);
-    }
-
-    @Override
-    public CategoryDto getById(Long id) {
-        return categoryMapper.toDto(getEntityOrThrow(id));
-    }
-
-    @Override
-    public List<CategoryDto> getAll() {
-        return categoryMapper.toDtoList(categoryRepository.findAll());
+    @Transactional
+    public void deleteCategory(Long id) {
+        if (!categoryRepository.existsById(id)) throw new RuntimeException("Category not found: " + id);
+        categoryRepository.deleteById(id);
     }
 }

@@ -1,13 +1,21 @@
 package com.morago.backend.service.theme;
 
+import com.morago.backend.dto.FileResponse;
 import com.morago.backend.dto.ThemeDto;
+import com.morago.backend.entity.File;
 import com.morago.backend.entity.Theme;
 import com.morago.backend.exception.ResourceNotFoundException;
 import com.morago.backend.mapper.ThemeMapper;
+import com.morago.backend.repository.CategoryRepository;
+import com.morago.backend.repository.FileRepository;
 import com.morago.backend.repository.ThemeRepository;
+import com.morago.backend.service.file.FileService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -18,66 +26,103 @@ public class ThemeServiceImpl implements ThemeService {
 
     private final ThemeRepository themeRepository;
     private final ThemeMapper themeMapper;
+    private final FileRepository fileRepository;
+    private final FileService fileService;
+    private final CategoryRepository categoryRepository;
 
-
-    private Theme getThemeOrThrow(Long id) {
-        return themeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Theme not found with id: " + id));
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ThemeDto> listThemes(Pageable pageable, String q) {
+        if (q != null && !q.isBlank()) {
+            return themeRepository.findByNameContainingIgnoreCase(q.trim(), pageable)
+                    .map(themeMapper::toDto);
+        }
+        return themeRepository.findAll(pageable).map(themeMapper::toDto);
     }
 
     @Override
-    public ThemeDto create(ThemeDto dto) {
-        Theme theme = themeMapper.toEntity(dto);
-        Theme saved = themeRepository.save(theme);
-        return themeMapper.toDto(saved);
-    }
+    @Transactional
+    public ThemeDto createTheme(ThemeDto dto, MultipartFile icon) {
+        Theme theme = Theme.builder()
+                .name(dto.getName())
+                .koreanTitle(dto.getKoreanTitle())
+                .price(dto.getPrice())
+                .nightPrice(dto.getNightPrice())
+                .description(dto.getDescription())
+                .isPopular(Boolean.TRUE.equals(dto.getPopular()))
+                .isActive(dto.getActive() == null ? true : dto.getActive())
+                .build();
 
-    @Override
-    public ThemeDto update(Long id, ThemeDto dto) {
-        Theme existing = getThemeOrThrow(id);
+        if (dto.getCategoryId() != null) {
+            var category = categoryRepository.findById(dto.getCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + dto.getCategoryId()));
+            theme.setCategory(category);
+        }
 
+        // Save first to get an ID
+        theme = themeRepository.save(theme);
 
-        existing.setName(dto.getName());
-        existing.setKoreanTitle(dto.getKoreanTitle());
-        existing.setPrice(dto.getPrice());
-        existing.setNightPrice(dto.getNightPrice());
-        existing.setDescription(dto.getDescription());
-        existing.setPopular(dto.getPopular());
-        existing.setActive(dto.getActive());
+        // If icon provided, upload & attach
+        if (icon != null && !icon.isEmpty()) {
+            FileResponse savedIcon = fileService.uploadThemeIcon(theme.getId(), icon);
+            File fileEntity = fileRepository.findById(savedIcon.id())
+                    .orElseThrow(() -> new ResourceNotFoundException("Uploaded file not found: " + savedIcon.id()));
 
+            theme.setIcon(fileEntity);
+            theme = themeRepository.save(theme);
+        }
 
-//        if (dto.getCategoryId() != null) {
-//            existing.setCategory(themeMapper.map(dto.getCategoryId()));
-//        }
-//        if (dto.getIconFileId() != null) {
-//            existing.setIcon(themeMapper.mapFile(dto.getIconFileId()));
-//        }
-//        if (dto.getTranslatorProfileIds() != null) {
-//            existing.setTranslators(themeMapper.mapTranslatorEntities(dto.getTranslatorProfileIds()));
-//        }
-
-        Theme updated = themeRepository.save(existing);
-        return themeMapper.toDto(updated);
-    }
-
-    @Override
-    public void delete(Long id) {
-        Theme theme = getThemeOrThrow(id);
-        themeRepository.delete(theme);
-    }
-
-    @Override
-    public ThemeDto getById(Long id) {
-        Theme theme = getThemeOrThrow(id);
         return themeMapper.toDto(theme);
     }
 
     @Override
-    public List<ThemeDto> getAll() {
-        return themeRepository.findAll().stream()
-                .map(themeMapper::toDto)
-                .toList();
+    @Transactional
+    public ThemeDto updateTheme(Long id, ThemeDto dto, MultipartFile icon) {
+        Theme theme = themeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Theme not found: " + id));
+
+        if (dto.getName() != null) theme.setName(dto.getName());
+        if (dto.getKoreanTitle() != null) theme.setKoreanTitle(dto.getKoreanTitle());
+        if (dto.getPrice() != null) theme.setPrice(dto.getPrice());
+        if (dto.getNightPrice() != null) theme.setNightPrice(dto.getNightPrice());
+        if (dto.getDescription() != null) theme.setDescription(dto.getDescription());
+        if (dto.getPopular() != null) theme.setPopular(dto.getPopular());
+        if (dto.getActive() != null) theme.setActive(dto.getActive());
+
+        if (dto.getCategoryId() != null) {
+            var category = categoryRepository.findById(dto.getCategoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + dto.getCategoryId()));
+            theme.setCategory(category);
+        }
+
+        theme = themeRepository.save(theme);
+
+        // Handle icon replacement if provided
+        if (icon != null && !icon.isEmpty()) {
+            // Optionally delete/replace old icon file if present
+            // if (theme.getIcon() != null) fileService.delete(theme.getIcon().getId());
+
+            FileResponse newIcon = fileService.uploadThemeIcon(theme.getId(), icon);
+            File fileEntity = fileRepository.findById(newIcon.id())
+                    .orElseThrow(() -> new ResourceNotFoundException("Uploaded file not found: " + newIcon.id()));
+
+            theme.setIcon(fileEntity);
+            theme = themeRepository.save(theme);
+        }
+
+        return themeMapper.toDto(theme);
     }
+
+    @Override
+    @Transactional
+    public void deleteTheme(Long id) {
+        if (!themeRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Theme not found: " + id);
+        }
+        themeRepository.deleteById(id);
+    }
+
+
 
     @Override
     @Transactional(readOnly = true)
@@ -94,5 +139,4 @@ public class ThemeServiceImpl implements ThemeService {
                 .map(themeMapper::toDto)
                 .toList();
     }
-
 }

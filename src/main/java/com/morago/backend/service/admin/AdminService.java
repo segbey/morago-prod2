@@ -19,7 +19,7 @@ public interface AdminService {
 
     Page<UserDto> listUsers(Pageable pageable);
     UserDto createUser(AdminUserDto dto);
-//    UserDto updateUser(Long id, UserDto req);
+    //    UserDto updateUser(Long id, UserDto req);
     void deleteUser(Long id);
     void setUserActive(Long userId, boolean active);
 
@@ -44,15 +44,6 @@ public interface AdminService {
 
     Page<TransactionAdminDto> listTransactions(Long userId, Pageable pageable);
 
-    Page<ThemeDto> listThemes(Pageable pageable, String q);
-    ThemeDto createTheme(ThemeDto dto, MultipartFile icon);
-    ThemeDto updateTheme(Long id, ThemeDto dto, MultipartFile icon);
-    void deleteTheme(Long id);
-
-    Page<CategoryDto> listCategories(Pageable pageable, String q);
-    Object createCategory(String name);
-    Object updateCategory(Long id, String name);
-    void deleteCategory(Long id);
 
     Page<CallDto> listCallsByUser(Long userId, Pageable pageable);
     Page<CallDto> listCallsByTranslator(Long translatorUserId, Pageable pageable);
@@ -63,8 +54,4 @@ public interface AdminService {
     // Deposits (per user)
     Page<TransactionAdminDto> listDepositsByUser(Long userId, Pageable pageable);
 
-    Page<LanguageDto> listLanguages(Pageable pageable, String q);
-    LanguageDto createLanguage(LanguageDto dto);
-    LanguageDto updateLanguage(Long id, LanguageDto dto);
-    void deleteLanguage(Long id);
 }
