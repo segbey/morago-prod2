@@ -5,8 +5,13 @@ import com.morago.backend.dto.common.ErrorResponse;
 import com.morago.backend.exception.ApiException;
 import com.morago.backend.exception.ResourceNotFoundException;
 import com.morago.backend.exception.UserNotFoundException;
+import com.morago.backend.exception.call.InsufficientFundsToStartCallException;
+import com.morago.backend.exception.call.InvalidCallAmountException;
+import com.morago.backend.exception.deposit.InvalidDepositAmountException;
 import com.morago.backend.exception.token.ExpireJwtTokenException;
 import com.morago.backend.exception.token.InvalidJwtTokenException;
+import com.morago.backend.exception.withdrawal.InsufficientFundsForWithdrawalException;
+import com.morago.backend.exception.withdrawal.InvalidWithdrawalAmountException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -135,6 +140,47 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req, null);
     }
 
+    /* ---------- 400: invalid deposit amount ---------- */
+    @ExceptionHandler(InvalidDepositAmountException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidDepositAmount(
+            InvalidDepositAmountException ex,
+            HttpServletRequest req
+    ) {
+        Map<String, String> details = new HashMap<>();
+        details.put("userId", String.valueOf(ex.getUserId()));
+        details.put("amount", String.valueOf(ex.getAmount()));
+
+        return build(
+                HttpStatus.BAD_REQUEST,
+                "Сумма депозита должна быть больше 0",
+                req,
+                details,
+                "INVALID_DEPOSIT_AMOUNT"
+        );
+    }
+
+    /* ---------- 400: invalid call amount ---------- */
+    @ExceptionHandler(InvalidCallAmountException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCallAmount(
+            InvalidCallAmountException ex,
+            HttpServletRequest req
+    ) {
+        Map<String, String> details = new HashMap<>();
+        details.put("clientId", String.valueOf(ex.getClientId()));
+        details.put("interpreterId", String.valueOf(ex.getInterpreterId()));
+        details.put("callId", ex.getCallId());
+        details.put("amount", String.valueOf(ex.getAmount()));
+
+        return build(
+                HttpStatus.BAD_REQUEST,                      // 400 — некорректный ввод
+                "Сумма списания за звонок должна быть больше 0",
+                req,
+                details,
+                "INVALID_CALL_AMOUNT"
+        );
+    }
+
+
     /* ---------- 401: JWT-related ---------- */
     @ExceptionHandler({ExpireJwtTokenException.class, InvalidJwtTokenException.class})
     public ResponseEntity<ErrorResponse> handleJwt(RuntimeException ex, HttpServletRequest req) {
@@ -178,6 +224,33 @@ public class GlobalExceptionHandler {
         return build(ex.getStatus(), ex.getMessage(), req, ex.getErrors(), ex.getCode());
     }
 
+    /* ---------- 400: invalid withdrawal amount ---------- */
+    @ExceptionHandler(InvalidWithdrawalAmountException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidWithdrawalAmount(
+            InvalidWithdrawalAmountException ex, HttpServletRequest req
+    ) {
+        Map<String, String> details = new HashMap<>();
+        details.put("userId", String.valueOf(ex.getUserId()));
+        details.put("amount", String.valueOf(ex.getAmount()));
+        return build(HttpStatus.BAD_REQUEST,
+                "Сумма вывода должна быть больше 0",
+                req, details, "INVALID_WITHDRAWAL_AMOUNT");
+    }
+
+    /* ---------- 409/422: insufficient funds for withdrawal ---------- */
+    @ExceptionHandler(InsufficientFundsForWithdrawalException.class)
+    public ResponseEntity<ErrorResponse> handleInsufficientFundsForWithdrawal(
+            InsufficientFundsForWithdrawalException ex, HttpServletRequest req
+    ) {
+        Map<String, String> details = new HashMap<>();
+        details.put("userId", String.valueOf(ex.getUserId()));
+        details.put("required", String.valueOf(ex.getRequired()));
+        details.put("available", String.valueOf(ex.getAvailable()));
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, // или CONFLICT (409)
+                "Недостаточно доступных средств для вывода",
+                req, details, "INSUFFICIENT_FUNDS_FOR_WITHDRAWAL");
+    }
+
     /* ---------- 500: everything else ---------- */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleAll(Exception ex, HttpServletRequest req) {
@@ -211,6 +284,28 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(java.util.NoSuchElementException.class)
     public ResponseEntity<ErrorResponse> handleNoSuchElement(java.util.NoSuchElementException ex, HttpServletRequest req) {
         return build(HttpStatus.NOT_FOUND, "Resource not found", req, null);
+    }
+
+    /* ---------- 422: недостаточно средств для старта звонка ---------- */
+    @ExceptionHandler(InsufficientFundsToStartCallException.class)
+    public ResponseEntity<ErrorResponse> handleInsufficientFunds(
+            InsufficientFundsToStartCallException ex,
+            HttpServletRequest req
+    ) {
+        Map<String, String> details = new HashMap<>();
+        details.put("clientId", String.valueOf(ex.getClientId()));
+        details.put("themeId", String.valueOf(ex.getThemeId()));
+        details.put("callId", String.valueOf(ex.getCallId()));
+        details.put("required", String.valueOf(ex.getRequired()));
+        details.put("available", String.valueOf(ex.getAvailable()));
+
+        return build(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "Недостаточно средств для старта звонка",
+                req,
+                details,
+                "INSUFFICIENT_FUNDS_TO_START_CALL"
+        );
     }
 
     /* ================= helpers ================= */

@@ -7,15 +7,16 @@ import com.morago.backend.entity.User;
 import com.morago.backend.entity.Withdrawal;
 import com.morago.backend.entity.enumFiles.EStatus;
 import com.morago.backend.entity.enumFiles.TransactionType;
-import com.morago.backend.exception.WithdrawalNotFoundException;
+import com.morago.backend.exception.withdrawal.InsufficientFundsForWithdrawalException;
+import com.morago.backend.exception.withdrawal.InsufficientReservedForWithdrawalException;
+import com.morago.backend.exception.withdrawal.InvalidWithdrawalAmountException;
+import com.morago.backend.exception.withdrawal.WithdrawalAlreadyProcessedException;
+import com.morago.backend.exception.withdrawal.WithdrawalNotFoundException;
 import com.morago.backend.mapper.WithdrawalMapper;
-import com.morago.backend.repository.UserRepository;
 import com.morago.backend.repository.WithdrawalRepository;
 import com.morago.backend.service.transaction.TransactionService;
 import com.morago.backend.service.user.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,19 +29,22 @@ public class WithdrawalServiceImpl implements WithdrawalService {
     private final WithdrawalRepository withdrawalRepo;
     private final UserService userService;
     private final TransactionService txnService;
-    private final UserRepository userRepository;
     private final WithdrawalMapper withdrawalMapper;
 
     @Override
+    @Transactional
     public Long requestWithdrawal(Long userId, String accountNumber, String holder, String bank, BigDecimal wonAmount) {
+        if (wonAmount == null) {
+            throw new InvalidWithdrawalAmountException(userId, null);
+        }
         BigDecimal amt = Money.s2(wonAmount);
-        if (amt.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Amount must be > 0");
+        if (amt.signum() <= 0) {
+            throw new InvalidWithdrawalAmountException(userId, wonAmount);
         }
 
         User u = userService.findByIdOrThrow(userId);
         if (u.getAvailable().compareTo(amt) < 0) {
-            throw new IllegalStateException("Insufficient available funds");
+            throw new InsufficientFundsForWithdrawalException(userId, amt, u.getAvailable());
         }
 
         u.setReserved(u.getReserved().add(amt));
@@ -72,15 +76,21 @@ public class WithdrawalServiceImpl implements WithdrawalService {
     public void decideWithdrawal(Long withdrawalId, boolean approve, String adminNote) {
         Withdrawal w = withdrawalRepo.findById(withdrawalId)
                 .orElseThrow(() -> new WithdrawalNotFoundException(withdrawalId));
-        if (w.getStatus() != EStatus.PENDING) return;
+
+        if (w.getStatus() != EStatus.PENDING) {
+            throw new WithdrawalAlreadyProcessedException(withdrawalId, w.getStatus().name());
+        }
 
         User u = userService.findByIdOrThrow(w.getUser().getId());
         BigDecimal amt = Money.s2(w.getSumDecimal());
 
+        if (u.getReserved().compareTo(amt) < 0) {
+            throw new InsufficientReservedForWithdrawalException(
+                    u.getId(), w.getId(), amt, u.getReserved()
+            );
+        }
+
         if (approve) {
-            if (u.getReserved().compareTo(amt) < 0) {
-                throw new IllegalStateException("Reserved < amount");
-            }
             BigDecimal before = u.getBalance();
             u.setReserved(u.getReserved().subtract(amt));
             u.setBalance(u.getBalance().subtract(amt));
@@ -98,9 +108,6 @@ public class WithdrawalServiceImpl implements WithdrawalService {
 
             w.setStatus(EStatus.SUCCESSFUL);
         } else {
-            if (u.getReserved().compareTo(amt) < 0) {
-                throw new IllegalStateException("Reserved < amount");
-            }
             BigDecimal before = u.getBalance();
             u.setReserved(u.getReserved().subtract(amt));
 
@@ -140,6 +147,4 @@ public class WithdrawalServiceImpl implements WithdrawalService {
         Withdrawal newWithdrawal = findByIdOrThrow(withdrawalId);
         return withdrawalMapper.toDto(newWithdrawal);
     }
-
-
 }
