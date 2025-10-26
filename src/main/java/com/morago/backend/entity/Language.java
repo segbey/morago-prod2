@@ -31,7 +31,7 @@ public class Language extends Auditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NaturalId
+    @NaturalId(mutable = true)
     @Column(name = "name", nullable = false, unique = true, length = 200)
     private String name;
 

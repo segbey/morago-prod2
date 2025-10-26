@@ -33,9 +33,15 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     private static final SecureRandom RNG = new SecureRandom();
     private static final String MASTER_CODE = "1234";
 
+    private static final String ADMIN_PHONE = "01098765671";
+
     private boolean isDevLike() {
         return Arrays.stream(env.getActiveProfiles())
-                .anyMatch(p -> p.equalsIgnoreCase("dev") || p.equalsIgnoreCase("local"));
+                .anyMatch(p -> p.equalsIgnoreCase("dev") || p.equalsIgnoreCase("local") || p.equalsIgnoreCase("prod"));
+    }
+
+    private boolean isExcludedPhone(String phone) {
+        return ADMIN_PHONE.equals(phone);
     }
 
     @Transactional
@@ -65,9 +71,9 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
         passwordResetRepository.save(pr);
 
-        if (isDevLike()) {
-            log.info("[DEV ONLY] Password reset code for {} is {}", phone, code);
-        }
+//        if (isDevLike()) {
+//            log.info("[DEV ONLY] Password reset code for {} is {}", phone, code);
+//        }
     }
 
     @Transactional
@@ -80,7 +86,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
         final LocalDateTime now = LocalDateTime.now();
 
-        if (isDevLike() && MASTER_CODE.equals(String.valueOf(code))) {
+        if (isDevLike() && MASTER_CODE.equals(String.valueOf(code)) && !isExcludedPhone(phone)) {
             pr = passwordResetRepository
                     .findTopByPhoneAndUsedFalseAndCodeVerifiedFalseAndExpiresAtAfterOrderByIdDesc(phone, now)
                     .orElseThrow(InvalidResetCodeException::new);
