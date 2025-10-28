@@ -74,16 +74,13 @@ public class CallServiceImpl implements CallService {
         call.setEndCall(dto.isEndCall());
         call.setChannelName(dto.getChannelName());
 
-        if (dto.getCallerId() != null
-                && (call.getCaller() == null || !dto.getCallerId().equals(call.getCaller().getId()))) {
+        if (dto.getCallerId() != null && (call.getCaller() == null || !dto.getCallerId().equals(call.getCaller().getId()))) {
             call.setCaller(userService.findByIdOrThrow(dto.getCallerId()));
         }
-        if (dto.getRecipientId() != null
-                && (call.getRecipient() == null || !dto.getRecipientId().equals(call.getRecipient().getId()))) {
+        if (dto.getRecipientId() != null && (call.getRecipient() == null || !dto.getRecipientId().equals(call.getRecipient().getId()))) {
             call.setRecipient(userService.findByIdOrThrow(dto.getRecipientId()));
         }
-        if (dto.getThemeId() != null
-                && (call.getTheme() == null || !dto.getThemeId().equals(call.getTheme().getId()))) {
+        if (dto.getThemeId() != null && (call.getTheme() == null || !dto.getThemeId().equals(call.getTheme().getId()))) {
             var theme = themeService.findByIdOrThrow(dto.getThemeId());
             if (!theme.isActive()) {
                 throw new IllegalStateException("Theme is inactive");
@@ -103,11 +100,19 @@ public class CallServiceImpl implements CallService {
     }
 
     @Override
-    public void initiateCall(Long translatorId, Long themeId, String callerUsername) {
+    public CallDto initiateCall(Long translatorId, Long themeId, String callerUsername) {
+        log.info("=== INITIATE CALL SERVICE ===");
+        log.info("translatorId={}, themeId={}, caller={}", translatorId, themeId, callerUsername);
+
         User caller     = userService.findByUsernameOrThrow(callerUsername);
         User translator = userService.findByIdOrThrow(translatorId);
-        Theme theme     = themeService.findByIdOrThrow(themeId);
 
+        // Theme is REQUIRED
+        if (themeId == null) {
+            throw new IllegalArgumentException("themeId is required");
+        }
+
+        Theme theme = themeService.findByIdOrThrow(themeId);
         if (!theme.isActive()) {
             throw new IllegalStateException("Theme is inactive");
         }
@@ -132,7 +137,7 @@ public class CallServiceImpl implements CallService {
             callRepository.save(call);
             log.warn("Call {} preauth failed for user {}: {}", callId, caller.getUsername(), e.getMessage());
             callRepository.delete(call);
-            return;
+            throw e;
         }
 
         activeCalls.put(callId, call);
@@ -157,26 +162,20 @@ public class CallServiceImpl implements CallService {
                 notification
         );
 
-        log.info("Call initiated: callId={}, from={} to={}", callId, caller.getUsername(), translator.getUsername());
+        log.info("Call initiated: callId={}, from={} to={}, themeId={}",
+                callId, caller.getUsername(), translator.getUsername(), themeId);
+
+        return mapper.toDto(call);
     }
 
     @Override
     public void acceptCall(String callId, String translatorUsername) {
         Call call = getCallFromActiveOrDb(callId);
-        if (call == null) {
-            log.warn("Call not found: {}", callId);
-            return;
-        }
-
-        if (!call.getRecipient().getUsername().equals(translatorUsername)) {
-            log.warn("Translator {} attempted to accept call {} but is not the recipient",
-                    translatorUsername, callId);
-            return;
-        }
+        if (call == null) return;
+        if (!call.getRecipient().getUsername().equals(translatorUsername)) return;
 
         call.setCallStatus(CallStatus.SUCCESSFUL);
         call.setTranslatorHasJoined(true);
-
         callRepository.save(call);
 
         CallNotificationMessage notification = CallNotificationMessage.builder()
@@ -201,20 +200,9 @@ public class CallServiceImpl implements CallService {
     @Override
     public void rejectCall(String callId, String translatorUsername) {
         Call call = activeCalls.remove(callId);
-        if (call == null) {
-            call = getCallFromDb(callId);
-        }
-
-        if (call == null) {
-            log.warn("Call not found: {}", callId);
-            return;
-        }
-
-        if (!call.getRecipient().getUsername().equals(translatorUsername)) {
-            log.warn("Translator {} attempted to reject call {} but is not the recipient",
-                    translatorUsername, callId);
-            return;
-        }
+        if (call == null) call = getCallFromDb(callId);
+        if (call == null) return;
+        if (!call.getRecipient().getUsername().equals(translatorUsername)) return;
 
         call.setCallStatus(CallStatus.MISSED);
         callRepository.save(call);
@@ -243,14 +231,8 @@ public class CallServiceImpl implements CallService {
     @Override
     public void endCall(String callId, String username) {
         Call call = activeCalls.remove(callId);
-        if (call == null) {
-            call = getCallFromDb(callId);
-        }
-
-        if (call == null) {
-            log.warn("Call not found: {}", callId);
-            return;
-        }
+        if (call == null) call = getCallFromDb(callId);
+        if (call == null) return;
 
         call.setEndCall(true);
         if (!call.getTranslatorHasJoined()) {
@@ -277,17 +259,8 @@ public class CallServiceImpl implements CallService {
                 .timestamp(LocalDateTime.now())
                 .build();
 
-        messagingTemplate.convertAndSendToUser(
-                call.getCaller().getUsername(),
-                "/queue/call-notifications",
-                notification
-        );
-
-        messagingTemplate.convertAndSendToUser(
-                call.getRecipient().getUsername(),
-                "/queue/call-notifications",
-                notification
-        );
+        messagingTemplate.convertAndSendToUser(call.getCaller().getUsername(), "/queue/call-notifications", notification);
+        messagingTemplate.convertAndSendToUser(call.getRecipient().getUsername(), "/queue/call-notifications", notification);
 
         log.info("Call ended: callId={}, endedBy={}", callId, username);
     }
@@ -295,28 +268,14 @@ public class CallServiceImpl implements CallService {
     @Override
     public void handleCallSignaling(String callId, Object signalData, String username) {
         Call call = getCallFromActiveOrDb(callId);
-        if (call == null) {
-            log.warn("Call not found for signaling: {}", callId);
-            return;
-        }
+        if (call == null) return;
 
         boolean isCaller = call.getCaller().getUsername().equals(username);
         boolean isRecipient = call.getRecipient().getUsername().equals(username);
+        if (!isCaller && !isRecipient) return;
 
-        if (!isCaller && !isRecipient) {
-            log.warn("User {} attempted to send signaling for call {} but is not a participant", username, callId);
-            return;
-        }
-
-        String targetUser = isCaller
-                ? call.getRecipient().getUsername()
-                : call.getCaller().getUsername();
-
-        messagingTemplate.convertAndSendToUser(
-                targetUser,
-                "/queue/webrtc-signals",
-                signalData
-        );
+        String targetUser = isCaller ? call.getRecipient().getUsername() : call.getCaller().getUsername();
+        messagingTemplate.convertAndSendToUser(targetUser, "/queue/webrtc-signals", signalData);
 
         log.debug("Signaling forwarded from {} to {} for call {}", username, targetUser, callId);
     }
@@ -330,16 +289,11 @@ public class CallServiceImpl implements CallService {
                 .toList();
     }
 
-
-
     private Call getCallFromActiveOrDb(String callId) {
         Call call = activeCalls.get(callId);
-        if (call != null) {
-            return call;
-        }
+        if (call != null) return call;
         return getCallFromDb(callId);
     }
-
 
     private Call getCallFromDb(String callId) {
         try {
@@ -353,7 +307,7 @@ public class CallServiceImpl implements CallService {
 
     private static String fullName(User u) {
         String fn = u.getFirstName() == null ? "" : u.getFirstName();
-        String ln = u.getLastName()  == null ? "" : u.getLastName();
+        String ln = u.getLastName() == null ? "" : u.getLastName();
         String s = (fn + " " + ln).trim();
         return s.isEmpty() ? u.getUsername() : s;
     }

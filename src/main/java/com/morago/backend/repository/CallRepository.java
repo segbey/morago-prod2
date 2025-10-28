@@ -27,4 +27,7 @@ public interface CallRepository extends JpaRepository<Call, Long> {
 
     boolean existsByCaller_IdAndEndCallFalse(Long userId);
     boolean existsByRecipient_IdAndEndCallFalse(Long userId);
+
+    Optional<Call> findById(Long id);
+
 }

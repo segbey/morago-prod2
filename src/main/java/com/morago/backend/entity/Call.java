@@ -90,7 +90,7 @@ public class Call extends Auditable {
 
     public boolean isEndCall() {
         return endCall;
-    }      // опционально, если нужно именно такой геттер
+    }
 
     public void setEndCall(boolean v) {
         this.endCall = v;

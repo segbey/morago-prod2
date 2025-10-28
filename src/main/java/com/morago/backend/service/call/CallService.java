@@ -8,14 +8,10 @@ public interface CallService {
     List<CallDto> getAllCalls();
     CallDto updateCall(Long id, CallDto dto);
     void deleteCall(Long id);
-
-    void initiateCall(Long recipientId, Long themeId, String callerUsername);
-
+    CallDto initiateCall(Long recipientId, Long themeId, String callerUsername);
     List<CallDto> getCallHistoryForUser(String username);
     void acceptCall(String callId, String translatorUsername);
     void rejectCall(String callId, String translatorUsername);
     void endCall(String callId, String username);
     void handleCallSignaling(String callId, Object signalData, String username);
-
-
 }

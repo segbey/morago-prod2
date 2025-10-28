@@ -28,6 +28,7 @@ public class CallAccessService {
         Call call = callRepository.findById(callId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "CALL_NOT_FOUND", "Call not found: " + callId));
 
+
         String username = principal.getName(); // phone number from JWT
 
         boolean isParticipant = Objects.equals(call.getCaller().getUsername(), username) ||

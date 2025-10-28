@@ -10,10 +10,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class WebRTCSignalMessage {
-    private String type; // OFFER, ANSWER, ICE_CANDIDATE
+    private String type;
     private Long callId;
     private String fromUserId;
     private String toUserId;
-    private Object sdp; // RTCSessionDescriptionInit for OFFER/ANSWER
-    private Object candidate; // RTCIceCandidateInit for ICE_CANDIDATE
-}
+    private Object sdp;
+    private Object candidate; }

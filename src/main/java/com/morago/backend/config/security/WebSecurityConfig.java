@@ -90,6 +90,7 @@ public class WebSecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/translators/*/rating").authenticated()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/translators/**").hasAnyRole("TRANSLATOR", "ADMIN", "USER")
+                        .requestMatchers("/call/**").authenticated()
 
 
 
