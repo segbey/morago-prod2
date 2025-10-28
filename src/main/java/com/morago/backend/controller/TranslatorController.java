@@ -1,12 +1,9 @@
 package com.morago.backend.controller;
 import com.morago.backend.dto.translator.TranslatorProfileDto;
-import com.morago.backend.mapper.WithdrawalMapper;
 import com.morago.backend.service.profile.TranslatorProfileService;
 import com.morago.backend.service.user.UserService;
-import com.morago.backend.service.withdrawal.WithdrawalService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

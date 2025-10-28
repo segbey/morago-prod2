@@ -11,6 +11,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.Principal;
 
@@ -24,6 +25,7 @@ public class CallSignalingController {
     private final SimpMessagingTemplate messagingTemplate;
 
     @MessageMapping("/webrtc.offer")
+    @Transactional
     public void handleOffer(@Payload WebRTCSignalMessage message, Principal principal) {
         log.info("Received OFFER for call {} from {}", message.getCallId(), principal.getName());
         callAccessService.validateTargetUser(
@@ -41,6 +43,7 @@ public class CallSignalingController {
     }
 
     @MessageMapping("/webrtc.answer")
+    @Transactional
     public void handleAnswer(@Payload WebRTCSignalMessage message, Principal principal) {
         log.info("Received ANSWER for call {} from {}", message.getCallId(), principal.getName());
         callAccessService.validateTargetUser(
@@ -58,6 +61,7 @@ public class CallSignalingController {
     }
 
     @MessageMapping("/webrtc.ice")
+    @Transactional
     public void handleIceCandidate(@Payload WebRTCSignalMessage message, Principal principal) {
         log.debug("Received ICE candidate for call {} from {}", message.getCallId(), principal.getName());
         callAccessService.validateTargetUser(
@@ -74,11 +78,11 @@ public class CallSignalingController {
     }
 
     @MessageMapping("/call.accept")
+    @Transactional
     public void acceptCall(@Payload CallActionRequest request, Principal principal) {
         log.info("Call {} accepted by {}", request.getCallId(), principal.getName());
         callAccessService.validateCallAccess(request.getCallId(), principal);
 
-        // Instead of callService.acceptCall → just notify both parties
         String otherUser = callAccessService.getOtherParticipant(request.getCallId(), principal);
 
         CallNotificationMessage notification = CallNotificationMessage.builder()
@@ -91,6 +95,7 @@ public class CallSignalingController {
     }
 
     @MessageMapping("/call.reject")
+    @Transactional
     public void rejectCall(@Payload CallActionRequest request, Principal principal) {
         log.info("Call {} rejected by {}", request.getCallId(), principal.getName());
 
@@ -106,8 +111,8 @@ public class CallSignalingController {
         messagingTemplate.convertAndSendToUser(otherUser, "/queue/call-notifications", notification);
     }
 
-
     @MessageMapping("/call.end")
+    @Transactional
     public void endCall(@Payload CallActionRequest request, Principal principal) {
         log.info("Call {} ended by {}", request.getCallId(), principal.getName());
         callAccessService.validateCallAccess(request.getCallId(), principal);

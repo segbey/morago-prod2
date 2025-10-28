@@ -28,25 +28,57 @@ public class CallController {
             @RequestBody Map<String, Object> request,
             @AuthenticationPrincipal UserDetails userDetails) {
 
+        log.info("========================================");
+        log.info("CREATE CALL ENDPOINT HIT!");
+        log.info("Request body: {}", request);
+        log.info("UserDetails: username={}, authorities={}",
+                userDetails != null ? userDetails.getUsername() : "NULL",
+                userDetails != null ? userDetails.getAuthorities() : "NULL");
+        log.info("========================================");
+
         Long recipientId = getLongValue(request, "recipientId");
+        if (recipientId == null) {
+            recipientId = getLongValue(request, "translatorId");
+        }
+
         Long themeId = getLongValue(request, "themeId");
 
-        if (recipientId == null || themeId == null) {
+        if (recipientId == null) {
+            log.error("Neither recipientId nor translatorId found in request: {}", request);
             return ResponseEntity.badRequest().body(Map.of(
-                    "error", "recipientId and themeId are required"
+                    "error", "translatorId or recipientId is required"
+            ));
+        }
+
+        if (themeId == null) {
+            log.error("themeId is null in request: {}", request);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "themeId is required"
             ));
         }
 
         String callerUsername = userDetails.getUsername();
-        log.info("Creating call from {} to translator {}", callerUsername, recipientId);
+        log.info("Creating call from {} to translator {} with theme {}", callerUsername, recipientId, themeId);
 
-        callService.initiateCall(recipientId, themeId, callerUsername);
+        try {
+            CallDto call = callService.initiateCall(recipientId, themeId, callerUsername);
 
-        return ResponseEntity.ok(Map.of(
-                "message", "Call initiated successfully",
-                "recipientId", recipientId,
-                "themeId", themeId
-        ));
+            log.info("Call created successfully: callId={}", call.getId());
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Call initiated successfully",
+                    "callId", call.getId(),
+                    "id", call.getId(),
+                    "recipientId", recipientId,
+                    "translatorId", recipientId,
+                    "themeId", themeId
+            ));
+        } catch (Exception e) {
+            log.error("Failed to create call", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Failed to create call: " + e.getMessage()
+            ));
+        }
     }
 
 

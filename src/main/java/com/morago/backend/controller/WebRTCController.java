@@ -1,14 +1,12 @@
 package com.morago.backend.controller;
 
-import com.morago.backend.dto.tokens.WebRTCSignalMessage;
 import com.morago.backend.service.webrtc.WebRTCService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.messaging.handler.annotation.DestinationVariable;import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
+import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.stereotype.Controller;
 
-import java.time.LocalDateTime;
 
 @Controller
 @RequiredArgsConstructor

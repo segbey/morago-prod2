@@ -15,8 +15,6 @@ public class TestWebSocketController {
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
-            /* Send a test notification to a specific user
-            * GET http://localhost:8080/api/test/notification/user123?message=Hello User!*/
     @GetMapping("/notification/{userId}")
     public Map<String, Object> sendTestNotification(
             @PathVariable String userId,
@@ -42,9 +40,7 @@ public class TestWebSocketController {
         return response;
     }
 
-    /* Send a broadcast notification to all subscribers
-     * GET http://localhost:8080/api/test/broadcast?message=Hello Everyone!
-     */
+
     @GetMapping("/broadcast")
     public Map<String, Object> sendBroadcastNotification(
             @RequestParam(defaultValue = "Broadcast test message") String message) {
@@ -68,10 +64,7 @@ public class TestWebSocketController {
         return response;
     }
 
-    /*
-     * Send a test call signal from caller to recipient
-     * GET http://localhost:8080/api/test/call/caller123/recipient456?themeId=1
-     */
+
     @GetMapping("/call/{callerId}/{recipientId}")
     public Map<String, Object> sendTestCallSignal(
             @PathVariable String callerId,

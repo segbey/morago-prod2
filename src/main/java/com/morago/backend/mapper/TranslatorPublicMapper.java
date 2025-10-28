@@ -4,7 +4,6 @@ import com.morago.backend.dto.translator.TranslatorProfileDto;
 import com.morago.backend.entity.TranslatorProfile;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import java.util.stream.Collectors;
 import java.util.List;
 
 @Mapper(componentModel = "spring")

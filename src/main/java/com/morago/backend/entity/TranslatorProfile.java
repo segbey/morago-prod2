@@ -93,7 +93,7 @@ public class TranslatorProfile extends Auditable {
     @DecimalMax("5.00")
     @NotNull
     @Builder.Default
-    private BigDecimal ratingAvg = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP); // 0.00..5.00
+    private BigDecimal ratingAvg = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
     @Column(name = "rating_count", nullable = false)
     @Builder.Default

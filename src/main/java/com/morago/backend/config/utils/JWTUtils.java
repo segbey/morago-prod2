@@ -13,7 +13,6 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
-import com.morago.backend.entity.User;
 
 import java.security.Key;
 import java.time.Instant;
