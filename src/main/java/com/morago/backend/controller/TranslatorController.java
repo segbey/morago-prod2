@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -80,4 +81,23 @@ public class TranslatorController {
         TranslatorProfileDto dto = translatorProfileService.getById(id);
         return ResponseEntity.ok(dto);
     }
+    @Operation(
+            summary = "Request withdrawal",
+            description = "Submit a withdrawal request for translator earnings.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Withdrawal request submitted successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid withdrawal request"),
+                    @ApiResponse(responseCode = "403", description = "Forbidden - Translator access required")
+            }
+    )
+    @PostMapping("/withdrawal-request")
+    @PreAuthorize("hasRole('TRANSLATOR')")
+    public ResponseEntity<Long> requestWithdrawal(
+            Authentication authentication,
+            @jakarta.validation.Valid @RequestBody com.morago.backend.dto.billing.withdrawal.CreateWithdrawalRequest withdrawalRequest) {
+        Long userId = userService.getCurrentUser().getId();
+        Long withdrawalId = translatorProfileService.requestTranslatorWithdrawal(userId, withdrawalRequest);
+        return ResponseEntity.ok(withdrawalId);
+    }
+
 }
