@@ -52,7 +52,7 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public User findByIdOrThrow(Long id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException(String.valueOf(id)));
+                .orElseThrow(() -> new UserNotFoundException(id));
     }
 
     @Override
@@ -163,7 +163,6 @@ public class UserServiceImpl implements UserService {
         changePassword(me.getId(), dto);
     }
 
-    //for admin
     @Override
     @Transactional
     public UserUpdateProfileResponseDto updateProfile(Long userId, UserUpdateProfileRequestDto dto) {
@@ -234,7 +233,6 @@ public class UserServiceImpl implements UserService {
         if (pwd == null || pwd.length() < 8) {
             throw new WeakPasswordException("Password must be at least 8 characters");
         }
-        // Example: min 1 letter и 1 digit
         if (!pwd.matches("^(?=.*[A-Za-z])(?=.*\\d).{8,}$")) {
             throw new WeakPasswordException("Password must contain letters and digits");
         }

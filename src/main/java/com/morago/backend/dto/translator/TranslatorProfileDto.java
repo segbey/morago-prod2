@@ -18,14 +18,9 @@ public class TranslatorProfileDto {
     private String levelOfKorean;
     private LocalDateTime updatedAt;
     private String avatarUrl;
-
-
-
     private Long userId;
-
     private Set<Long> languageIds;
     private Set<Long> themeIds;
-
-    private BigDecimal ratingAvg;   // 0.00..5.00 (scale=2)
+    private BigDecimal ratingAvg;
     private Integer    ratingCount;
 }

@@ -7,9 +7,13 @@ import com.morago.backend.exception.ResourceNotFoundException;
 import com.morago.backend.exception.UserNotFoundException;
 import com.morago.backend.exception.call.InsufficientFundsToStartCallException;
 import com.morago.backend.exception.call.InvalidCallAmountException;
+import com.morago.backend.exception.common.NotFoundException;
 import com.morago.backend.exception.deposit.InvalidDepositAmountException;
+import com.morago.backend.exception.language.LanguageAlreadyExistsException;
+import com.morago.backend.exception.language.LanguageInUseException;
 import com.morago.backend.exception.token.ExpireJwtTokenException;
 import com.morago.backend.exception.token.InvalidJwtTokenException;
+import com.morago.backend.exception.translatorprofile.TranslatorProfileAlreadyExistsException;
 import com.morago.backend.exception.withdrawal.InsufficientFundsForWithdrawalException;
 import com.morago.backend.exception.withdrawal.InvalidWithdrawalAmountException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -95,6 +99,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest req) {
         return build(HttpStatus.FORBIDDEN, "Forbidden", req, null);
+    }
+
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleDomainNotFound(NotFoundException ex, HttpServletRequest req) {
+        Map<String, String> details = new HashMap<>();
+        details.put("entity", ex.getEntity());
+        details.put("id", String.valueOf(ex.getId()));
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), req, details, "NOT_FOUND");
     }
 
     /* ---------- 404: your custom not-found exceptions ---------- */
@@ -251,6 +263,14 @@ public class GlobalExceptionHandler {
                 req, details, "INSUFFICIENT_FUNDS_FOR_WITHDRAWAL");
     }
 
+    @ExceptionHandler(TranslatorProfileAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleProfileAlreadyExists(
+            TranslatorProfileAlreadyExistsException ex,
+            HttpServletRequest req
+    ) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), req, null, "TRANSLATOR_PROFILE_ALREADY_EXISTS");
+    }
+
     /* ---------- 500: everything else ---------- */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleAll(Exception ex, HttpServletRequest req) {
@@ -263,6 +283,20 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex, HttpServletRequest req) {
         // Можно тоньше распознать текст и выдать code, например INSF_FUNDS
         return build(HttpStatus.CONFLICT, ex.getMessage(), req, null, "BUSINESS_CONFLICT");
+    }
+
+    @ExceptionHandler(LanguageAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleLanguageAlreadyExists(
+            LanguageAlreadyExistsException ex, HttpServletRequest req
+    ) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), req, null, "LANGUAGE_ALREADY_EXISTS");
+    }
+
+    @ExceptionHandler(LanguageInUseException.class)
+    public ResponseEntity<ErrorResponse> handleLanguageInUse(
+            LanguageInUseException ex, HttpServletRequest req
+    ) {
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), req, null, "LANGUAGE_IN_USE");
     }
 
     /* ---------- 409: optimistic locking (concurrent updates) ---------- */

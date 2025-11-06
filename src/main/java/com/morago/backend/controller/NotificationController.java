@@ -1,6 +1,5 @@
 package com.morago.backend.controller;
 
-
 import com.morago.backend.dto.tokens.NotificationMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;

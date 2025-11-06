@@ -19,6 +19,7 @@ import com.morago.backend.service.transaction.TransactionService;
 import com.morago.backend.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -125,7 +126,7 @@ public class DepositServiceImpl implements DepositService{
                             : "Deposit confirmed",
                     EStatus.SUCCESSFUL
             );
-        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+        } catch (DataIntegrityViolationException e) {
             log.warn("[DEPOSIT] Duplicate transaction for depositId={}, corrId={}", depositId, corr);
         }
 

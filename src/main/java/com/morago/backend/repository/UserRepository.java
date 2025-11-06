@@ -2,7 +2,6 @@ package com.morago.backend.repository;
 
 import com.morago.backend.entity.User;
 import com.morago.backend.entity.enumFiles.Roles;
-import com.morago.backend.exception.UserNotFoundException;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;

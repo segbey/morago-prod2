@@ -4,7 +4,8 @@ import com.morago.backend.dto.FileResponse;
 import com.morago.backend.entity.File;
 import com.morago.backend.entity.enumFiles.FileCategory;
 import com.morago.backend.entity.enumFiles.FileVisibility;
-import com.morago.backend.exception.file.AvatarNotFoundException;
+import com.morago.backend.exception.AvatarNotFoundException;
+import com.morago.backend.exception.file.FileNotFoundException;
 import com.morago.backend.repository.FileRepository;
 import com.morago.backend.repository.UserRepository;
 import com.morago.backend.service.storage.StorageService;
@@ -14,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
 
 import java.io.IOException;
 import java.util.Optional;
@@ -168,4 +170,10 @@ public class FileServiceImpl implements FileService {
         return fileRepo.findByUserIdAndCategory(userId, category);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public File findByIdOrThrow(Long id) {
+        return fileRepo.findById(id)
+                .orElseThrow(() -> new FileNotFoundException(id));
+    }
 }

@@ -78,8 +78,6 @@ public class RatingServiceImpl implements RatingService {
         recalcAndUpdateTranslatorStats(translatorProfileId);
     }
 
-    /* ===== helpers ===== */
-
     private void recalcAndUpdateTranslatorStats(Long translatorProfileId) {
         Long count = ratingRepository.countByTranslator(translatorProfileId);
         Double avg  = ratingRepository.avgScore(translatorProfileId);
