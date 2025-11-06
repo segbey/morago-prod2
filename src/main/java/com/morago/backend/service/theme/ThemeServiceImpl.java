@@ -4,11 +4,10 @@ import com.morago.backend.dto.FileResponse;
 import com.morago.backend.dto.ThemeDto;
 import com.morago.backend.entity.File;
 import com.morago.backend.entity.Theme;
-import com.morago.backend.exception.ResourceNotFoundException;
+import com.morago.backend.exception.theme.ThemeNotFoundException;
 import com.morago.backend.mapper.ThemeMapper;
-import com.morago.backend.repository.CategoryRepository;
-import com.morago.backend.repository.FileRepository;
 import com.morago.backend.repository.ThemeRepository;
+import com.morago.backend.service.category.CategoryService;
 import com.morago.backend.service.file.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -26,9 +25,8 @@ public class ThemeServiceImpl implements ThemeService {
 
     private final ThemeRepository themeRepository;
     private final ThemeMapper themeMapper;
-    private final FileRepository fileRepository;
     private final FileService fileService;
-    private final CategoryRepository categoryRepository;
+    private final CategoryService categoryService;
 
     @Override
     @Transactional(readOnly = true)
@@ -50,23 +48,19 @@ public class ThemeServiceImpl implements ThemeService {
                 .nightPrice(dto.getNightPrice())
                 .description(dto.getDescription())
                 .isPopular(Boolean.TRUE.equals(dto.getPopular()))
-                .isActive(dto.getActive() == null ? true : dto.getActive())
+                .isActive(dto.getActive() == null || dto.getActive())
                 .build();
 
         if (dto.getCategoryId() != null) {
-            var category = categoryRepository.findById(dto.getCategoryId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + dto.getCategoryId()));
+            var category = categoryService.findByIdOrThrow(dto.getCategoryId());
             theme.setCategory(category);
         }
 
-        // Save first to get an ID
         theme = themeRepository.save(theme);
 
-        // If icon provided, upload & attach
         if (icon != null && !icon.isEmpty()) {
             FileResponse savedIcon = fileService.uploadThemeIcon(theme.getId(), icon);
-            File fileEntity = fileRepository.findById(savedIcon.id())
-                    .orElseThrow(() -> new ResourceNotFoundException("Uploaded file not found: " + savedIcon.id()));
+            var fileEntity = fileService.findByIdOrThrow(savedIcon.id());
 
             theme.setIcon(fileEntity);
             theme = themeRepository.save(theme);
@@ -78,8 +72,7 @@ public class ThemeServiceImpl implements ThemeService {
     @Override
     @Transactional
     public ThemeDto updateTheme(Long id, ThemeDto dto, MultipartFile icon) {
-        Theme theme = themeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Theme not found: " + id));
+        Theme theme = findByIdOrThrow(id);
 
         if (dto.getName() != null) theme.setName(dto.getName());
         if (dto.getKoreanTitle() != null) theme.setKoreanTitle(dto.getKoreanTitle());
@@ -90,21 +83,15 @@ public class ThemeServiceImpl implements ThemeService {
         if (dto.getActive() != null) theme.setActive(dto.getActive());
 
         if (dto.getCategoryId() != null) {
-            var category = categoryRepository.findById(dto.getCategoryId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + dto.getCategoryId()));
+            var category = categoryService.findByIdOrThrow(dto.getCategoryId());
             theme.setCategory(category);
         }
 
         theme = themeRepository.save(theme);
 
-        // Handle icon replacement if provided
         if (icon != null && !icon.isEmpty()) {
-            // Optionally delete/replace old icon file if present
-            // if (theme.getIcon() != null) fileService.delete(theme.getIcon().getId());
-
             FileResponse newIcon = fileService.uploadThemeIcon(theme.getId(), icon);
-            File fileEntity = fileRepository.findById(newIcon.id())
-                    .orElseThrow(() -> new ResourceNotFoundException("Uploaded file not found: " + newIcon.id()));
+            File fileEntity = fileService.findByIdOrThrow(newIcon.id());
 
             theme.setIcon(fileEntity);
             theme = themeRepository.save(theme);
@@ -116,20 +103,17 @@ public class ThemeServiceImpl implements ThemeService {
     @Override
     @Transactional
     public void deleteTheme(Long id) {
-        if (!themeRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Theme not found: " + id);
-        }
-        themeRepository.deleteById(id);
+        Theme theme = findByIdOrThrow(id);
+        themeRepository.delete(theme);
     }
-
-
 
     @Override
     @Transactional(readOnly = true)
     public Theme findByIdOrThrow(Long id) {
         return themeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Theme not found with id: " + id));
+                .orElseThrow(() -> new ThemeNotFoundException(id));
     }
+
 
     @Override
     @Transactional(readOnly = true)

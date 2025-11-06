@@ -1,6 +1,5 @@
 package com.morago.backend.config.web;
 
-
 import com.morago.backend.config.JwtHandshakeInterceptor;
 import com.morago.backend.config.WebSocketChannelInterceptor;
 import com.morago.backend.config.CustomHandshakeHandler;

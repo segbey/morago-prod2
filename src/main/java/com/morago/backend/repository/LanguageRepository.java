@@ -14,6 +14,5 @@ public interface LanguageRepository extends JpaRepository<Language, Long> {
 
     List<Language> findAllByOrderByNameAsc();
 
-    //check if any translator uses this language
     boolean existsByTranslatorProfiles_Id(Long translatorProfileId);
 }

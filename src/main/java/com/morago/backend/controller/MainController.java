@@ -77,7 +77,7 @@ public class MainController {
                                               HttpServletResponse servletResponse) {
         AuthTokens tokens = authService.createAuthToken(authRequest);
 
-        boolean secure = false;   // localhost → false
+        boolean secure = false;
         String sameSite = "Lax";
         String path = "/auth";
 

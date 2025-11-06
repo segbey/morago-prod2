@@ -2,21 +2,16 @@ package com.morago.backend.service.language;
 
 import com.morago.backend.dto.LanguageDto;
 import com.morago.backend.entity.Language;
-import com.morago.backend.entity.TranslatorProfile;
-import com.morago.backend.exception.ResourceAlreadyExistsException;
-import com.morago.backend.exception.ResourceNotFoundException;
+import com.morago.backend.exception.language.LanguageAlreadyExistsException;
+import com.morago.backend.exception.language.LanguageInUseException;
+import com.morago.backend.exception.language.LanguageNotFoundException;
 import com.morago.backend.mapper.LanguageMapper;
 import com.morago.backend.repository.LanguageRepository;
-import com.morago.backend.repository.TranslatorProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -24,8 +19,18 @@ import java.util.List;
 public class LanguageServiceImpl implements LanguageService {
 
     private final LanguageRepository languageRepository;
-    private final TranslatorProfileRepository translatorProfileRepository;
     private final LanguageMapper languageMapper;
+
+    public Language findByIdOrThrow(Long id) {
+        return languageRepository.findById(id)
+                .orElseThrow(() -> new LanguageNotFoundException(id));
+    }
+
+    private String requireAndNormalizeName(String name) {
+        String raw = name == null ? "" : name.trim();
+        if (raw.isEmpty()) throw new IllegalArgumentException("Language name is required");
+        return raw;
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -38,48 +43,37 @@ public class LanguageServiceImpl implements LanguageService {
     }
 
     @Override
-    @Transactional
     public LanguageDto createLanguage(LanguageDto dto) {
-        String raw = dto.getName() == null ? "" : dto.getName().trim();
-        if (raw.isEmpty()) throw new IllegalArgumentException("Language name is required");
-        if (languageRepository.existsByNameIgnoreCase(raw)) {
-            throw new ResourceAlreadyExistsException("Language already exists: " + raw);
+        String name = requireAndNormalizeName(dto.getName());
+        if (languageRepository.existsByNameIgnoreCase(name)) {
+            throw new LanguageAlreadyExistsException(name);
         }
-        var entity = Language.builder().name(raw).build();
-        var saved = languageRepository.save(entity);
+        var saved = languageRepository.save(Language.builder().name(name).build());
         return languageMapper.toDto(saved);
     }
 
     @Override
-    @Transactional
     public LanguageDto updateLanguage(Long id, LanguageDto dto) {
-        var entity = languageRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Language not found: " + id));
+        var entity = findByIdOrThrow(id);
 
         if (dto.getName() != null) {
-            String raw = dto.getName().trim();
-            if (raw.isEmpty()) throw new IllegalArgumentException("Language name cannot be blank");
-            if (!raw.equalsIgnoreCase(entity.getName()) && languageRepository.existsByNameIgnoreCase(raw)) {
-                throw new ResourceAlreadyExistsException("Language already exists: " + raw);
+            String name = requireAndNormalizeName(dto.getName());
+            if (!name.equalsIgnoreCase(entity.getName()) &&
+                    languageRepository.existsByNameIgnoreCase(name)) {
+                throw new LanguageAlreadyExistsException(name);
             }
-            entity.setName(raw);
+            entity.setName(name);
         }
 
-        var saved = languageRepository.save(entity);
-        return languageMapper.toDto(saved);
+        return languageMapper.toDto(languageRepository.save(entity));
     }
 
     @Override
-    @org.springframework.transaction.annotation.Transactional
     public void deleteLanguage(Long id) {
-        var lang = languageRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Language not found: " + id));
+        var lang = findByIdOrThrow(id);
 
         if (!lang.getTranslatorProfiles().isEmpty()) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Language is in use by one or more translators"
-            );
+            throw new LanguageInUseException(id);
         }
 
         languageRepository.delete(lang);

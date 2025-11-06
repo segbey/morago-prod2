@@ -7,6 +7,5 @@ import org.mapstruct.MappingTarget;
 
 @Mapper(componentModel = "spring")
 public interface RatingMapper {
-    // Обновляет только score и comment в уже существующей сущности
     void updateEntityFromDto(RatingUpsertRequest dto, @MappingTarget Rating entity);
 }

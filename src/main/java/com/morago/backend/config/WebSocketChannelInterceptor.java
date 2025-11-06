@@ -1,6 +1,7 @@
 package com.morago.backend.config;
 
 import com.morago.backend.service.call.CallAccessService;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
@@ -20,7 +21,7 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
     private final CallAccessService callAccessService;
 
     @Override
-    public Message<?> preSend(Message<?> message, MessageChannel channel) {
+    public Message<?> preSend(@NonNull Message<?> message, @NonNull MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
         if (accessor != null && StompCommand.SEND.equals(accessor.getCommand())) {

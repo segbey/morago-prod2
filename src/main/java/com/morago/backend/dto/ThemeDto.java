@@ -1,45 +1,25 @@
 package com.morago.backend.dto;
 
-import com.morago.backend.dto.translator.TranslatorProfileDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class ThemeDto {
-
     private Long id;
-
     private String name;
-
     private String koreanTitle;
-
     private BigDecimal price;
-
     private BigDecimal nightPrice;
-
     private String description;
-
     private Boolean popular;
-
     private Boolean active;
-
-//    private LocalDateTime createdAt;
-//
-//    private LocalDateTime updatedAt;
-
     private Long categoryId;
     private String iconUrl;
-
-//    private List<Long> translatorProfileIds;
-//
-//    private List<TranslatorProfileDto> translators;
 }
