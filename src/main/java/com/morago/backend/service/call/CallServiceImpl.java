@@ -1,8 +1,10 @@
 package com.morago.backend.service.call;
 
+import com.morago.backend.config.utils.ThemePriceUtil;
 import com.morago.backend.dto.call.CallDto;
 import com.morago.backend.dto.tokens.CallNotificationMessage;
 import com.morago.backend.entity.Call;
+import com.morago.backend.entity.Money;
 import com.morago.backend.entity.Theme;
 import com.morago.backend.entity.User;
 import com.morago.backend.entity.enumFiles.CallStatus;
@@ -24,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,15 +47,25 @@ public class CallServiceImpl implements CallService {
     private final PricingService pricing;
     private final ApplicationEventPublisher publisher;
 
-    private final Map<String, Call> activeCalls = new ConcurrentHashMap<>();
+    private final Map<String, CallSessionData> activeCalls = new ConcurrentHashMap<>();
 
-    private <T> T findOrThrow(java.util.Optional<T> optional, String entityName, Long id) {
-        return optional.orElseThrow(() -> new ResourceNotFoundException(entityName + " not found with id " + id));
+    private static class CallSessionData {
+        Call call;
+        LocalDateTime startTime;
+        LocalDateTime acceptedTime;
+        boolean translatorJoined;
+
+        CallSessionData(Call call) {
+            this.call = call;
+            this.startTime = LocalDateTime.now();
+            this.translatorJoined = false;
+        }
     }
 
     @Override
     public CallDto getCallById(Long id) {
-        return mapper.toDto(findOrThrow(callRepository.findById(id), "Call", id));
+        return mapper.toDto(callRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Call not found with id " + id)));
     }
 
     @Override
@@ -62,26 +75,30 @@ public class CallServiceImpl implements CallService {
 
     @Override
     public CallDto updateCall(Long id, CallDto dto) {
-        Call call = findOrThrow(callRepository.findById(id), "Call", id);
+        Call call = callRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Call not found with id " + id));
 
         call.setDuration(dto.getDuration());
         call.setStatus(dto.isStatus());
-        call.setSumDecimal(dto.getSumDecimal());
-        call.setCommission(dto.getCommission());
+        call.setSumDecimal(Money.s2(dto.getSumDecimal()));
+        call.setCommission(Money.s2(dto.getCommission()));
         call.setTranslatorHasJoined(dto.isTranslatorHasJoined());
         call.setUserHasRated(dto.isUserHasRated());
         call.setCallStatus(dto.getCallStatus());
         call.setEndCall(dto.isEndCall());
         call.setChannelName(dto.getChannelName());
 
-        if (dto.getCallerId() != null && (call.getCaller() == null || !dto.getCallerId().equals(call.getCaller().getId()))) {
+        if (dto.getCallerId() != null && (call.getCaller() == null ||
+                !dto.getCallerId().equals(call.getCaller().getId()))) {
             call.setCaller(userService.findByIdOrThrow(dto.getCallerId()));
         }
-        if (dto.getRecipientId() != null && (call.getRecipient() == null || !dto.getRecipientId().equals(call.getRecipient().getId()))) {
+        if (dto.getRecipientId() != null && (call.getRecipient() == null ||
+                !dto.getRecipientId().equals(call.getRecipient().getId()))) {
             call.setRecipient(userService.findByIdOrThrow(dto.getRecipientId()));
         }
-        if (dto.getThemeId() != null && (call.getTheme() == null || !dto.getThemeId().equals(call.getTheme().getId()))) {
-            var theme = themeService.findByIdOrThrow(dto.getThemeId());
+        if (dto.getThemeId() != null && (call.getTheme() == null ||
+                !dto.getThemeId().equals(call.getTheme().getId()))) {
+            Theme theme = themeService.findByIdOrThrow(dto.getThemeId());
             if (!theme.isActive()) {
                 throw new IllegalStateException("Theme is inactive");
             }
@@ -104,10 +121,9 @@ public class CallServiceImpl implements CallService {
         log.info("=== INITIATE CALL SERVICE ===");
         log.info("translatorId={}, themeId={}, caller={}", translatorId, themeId, callerUsername);
 
-        User caller     = userService.findByUsernameOrThrow(callerUsername);
+        User caller = userService.findByUsernameOrThrow(callerUsername);
         User translator = userService.findByIdOrThrow(translatorId);
 
-        // Theme is REQUIRED
         if (themeId == null) {
             throw new IllegalArgumentException("themeId is required");
         }
@@ -122,7 +138,15 @@ public class CallServiceImpl implements CallService {
                 .recipient(translator)
                 .theme(theme)
                 .callStatus(CallStatus.CONNECT_NOT_SET)
+                .duration(0)
+                .sumDecimal(BigDecimal.ZERO)
+                .commission(ThemePriceUtil.perMinute(theme))
+                .translatorHasJoined(false)
+                .userHasRated(false)
+                .endCall(false)
+                .status(false)
                 .build();
+
         call = callRepository.save(call);
 
         String callId = String.valueOf(call.getId());
@@ -140,7 +164,7 @@ public class CallServiceImpl implements CallService {
             throw e;
         }
 
-        activeCalls.put(callId, call);
+        activeCalls.put(callId, new CallSessionData(call));
 
         CallNotificationMessage notification = CallNotificationMessage.builder()
                 .callId(callId)
@@ -162,21 +186,42 @@ public class CallServiceImpl implements CallService {
                 notification
         );
 
-        log.info("Call initiated: callId={}, from={} to={}, themeId={}",
-                callId, caller.getUsername(), translator.getUsername(), themeId);
+        log.info("Call initiated: callId={}, from={} to={}, themeId={}, commission={}",
+                callId, caller.getUsername(), translator.getUsername(), themeId, call.getCommission());
 
         return mapper.toDto(call);
     }
 
     @Override
     public void acceptCall(String callId, String translatorUsername) {
-        Call call = getCallFromActiveOrDb(callId);
-        if (call == null) return;
-        if (!call.getRecipient().getUsername().equals(translatorUsername)) return;
+        log.info("=== ACCEPT CALL ===");
+        log.info("callId={}, translator={}", callId, translatorUsername);
+
+        CallSessionData session = activeCalls.get(callId);
+        Call call = session != null ? session.call : getCallFromDb(callId);
+
+        if (call == null) {
+            log.warn("Call not found: {}", callId);
+            return;
+        }
+
+        if (!call.getRecipient().getUsername().equals(translatorUsername)) {
+            log.warn("Unauthorized accept attempt by {}", translatorUsername);
+            return;
+        }
 
         call.setCallStatus(CallStatus.SUCCESSFUL);
         call.setTranslatorHasJoined(true);
-        callRepository.save(call);
+        call.setStatus(true);
+
+        if (session != null) {
+            session.acceptedTime = LocalDateTime.now();
+            session.translatorJoined = true;
+        }
+
+        call = callRepository.save(call);
+        log.info("Call accepted: callId={}, status={}, translatorJoined={}",
+                callId, call.getCallStatus(), call.getTranslatorHasJoined());
 
         CallNotificationMessage notification = CallNotificationMessage.builder()
                 .callId(callId)
@@ -193,19 +238,35 @@ public class CallServiceImpl implements CallService {
                 "/queue/call-notifications",
                 notification
         );
-
-        log.info("Call accepted: callId={}, translator={}", callId, translatorUsername);
     }
 
     @Override
     public void rejectCall(String callId, String translatorUsername) {
-        Call call = activeCalls.remove(callId);
-        if (call == null) call = getCallFromDb(callId);
-        if (call == null) return;
-        if (!call.getRecipient().getUsername().equals(translatorUsername)) return;
+        log.info("=== REJECT CALL ===");
+        log.info("callId={}, translator={}", callId, translatorUsername);
+
+        CallSessionData session = activeCalls.remove(callId);
+        Call call = session != null ? session.call : getCallFromDb(callId);
+
+        if (call == null) {
+            log.warn("Call not found: {}", callId);
+            return;
+        }
+
+        if (!call.getRecipient().getUsername().equals(translatorUsername)) {
+            log.warn("Unauthorized reject attempt by {}", translatorUsername);
+            return;
+        }
 
         call.setCallStatus(CallStatus.MISSED);
-        callRepository.save(call);
+        call.setEndCall(true);
+        call.setStatus(false);
+        call.setTranslatorHasJoined(false);
+        call.setDuration(0);
+        call.setSumDecimal(BigDecimal.ZERO);
+
+        call = callRepository.save(call);
+        log.info("Call rejected: callId={}, status={}", callId, call.getCallStatus());
 
         debtorService.releasePreauthByCall(callId);
 
@@ -224,30 +285,67 @@ public class CallServiceImpl implements CallService {
                 "/queue/call-notifications",
                 notification
         );
-
-        log.info("Call rejected: callId={}, translator={}", callId, translatorUsername);
     }
 
     @Override
     public void endCall(String callId, String username) {
-        Call call = activeCalls.remove(callId);
-        if (call == null) call = getCallFromDb(callId);
-        if (call == null) return;
+        log.info("=== END CALL ===");
+        log.info("callId={}, endedBy={}", callId, username);
+
+        CallSessionData session = activeCalls.remove(callId);
+        Call call = session != null ? session.call : getCallFromDb(callId);
+
+        if (call == null) {
+            log.warn("Call not found: {}", callId);
+            return;
+        }
+
+        LocalDateTime endTime = LocalDateTime.now();
+        int durationMinutes = 0;
+        BigDecimal totalCharge = BigDecimal.ZERO;
+
+        if (call.getTranslatorHasJoined() && session != null && session.acceptedTime != null) {
+            Duration duration = Duration.between(session.acceptedTime, endTime);
+            long seconds = duration.getSeconds();
+            durationMinutes = (int) Math.ceil(seconds / 60.0);
+            BigDecimal commission = call.getCommission() != null ?
+                    call.getCommission() : ThemePriceUtil.perMinute(call.getTheme());
+            totalCharge = commission.multiply(BigDecimal.valueOf(durationMinutes));
+            totalCharge = Money.s2(totalCharge);
+
+            log.info("Call duration calculated: {} seconds = {} minutes, charge: {} (rate: {})",
+                    seconds, durationMinutes, totalCharge, commission);
+        }
 
         call.setEndCall(true);
+        call.setStatus(false);
+        call.setDuration(durationMinutes);
+        call.setSumDecimal(totalCharge);
+
         if (!call.getTranslatorHasJoined()) {
             call.setCallStatus(CallStatus.MISSED);
         } else {
             call.setCallStatus(CallStatus.SUCCESSFUL);
         }
-        callRepository.save(call);
 
-        BigDecimal amountWon = pricing.computeCharge(call);
-        Long clientId      = call.getCaller().getId();
-        Long interpreterId = call.getRecipient().getId();
-        publisher.publishEvent(new CallEndedEvent(clientId, interpreterId, callId, amountWon));
+        call = callRepository.save(call);
 
-        debtorService.releasePreauthByCall(callId);
+        log.info("Call ended: callId={}, status={}, duration={}min, charge={}, translatorJoined={}",
+                callId, call.getCallStatus(), durationMinutes, totalCharge, call.getTranslatorHasJoined());
+
+        if (call.getTranslatorHasJoined() && totalCharge.compareTo(BigDecimal.ZERO) > 0) {
+            try {
+                Long clientId = call.getCaller().getId();
+                Long interpreterId = call.getRecipient().getId();
+                log.info("Publishing CallEndedEvent: clientId={}, interpreterId={}, callId={}, amount={}",
+                        clientId, interpreterId, callId, totalCharge);
+                publisher.publishEvent(new CallEndedEvent(clientId, interpreterId, callId, totalCharge));
+            } catch (Exception e) {
+                log.error("Failed to process payment for call {}: {}", callId, e.getMessage(), e);
+            }
+        } else {
+            debtorService.releasePreauthByCall(callId);
+        }
 
         CallNotificationMessage notification = CallNotificationMessage.builder()
                 .callId(callId)
@@ -256,27 +354,35 @@ public class CallServiceImpl implements CallService {
                 .status("ENDED")
                 .recipientId(call.getRecipient().getUsername())
                 .recipientName(fullName(call.getRecipient()))
-                .timestamp(LocalDateTime.now())
+                .timestamp(endTime)
                 .build();
 
-        messagingTemplate.convertAndSendToUser(call.getCaller().getUsername(), "/queue/call-notifications", notification);
-        messagingTemplate.convertAndSendToUser(call.getRecipient().getUsername(), "/queue/call-notifications", notification);
-
-        log.info("Call ended: callId={}, endedBy={}", callId, username);
+        messagingTemplate.convertAndSendToUser(
+                call.getCaller().getUsername(),
+                "/queue/call-notifications",
+                notification
+        );
+        messagingTemplate.convertAndSendToUser(
+                call.getRecipient().getUsername(),
+                "/queue/call-notifications",
+                notification
+        );
     }
 
     @Override
     public void handleCallSignaling(String callId, Object signalData, String username) {
-        Call call = getCallFromActiveOrDb(callId);
+        Call call = activeCalls.containsKey(callId) ?
+                activeCalls.get(callId).call : getCallFromDb(callId);
         if (call == null) return;
 
         boolean isCaller = call.getCaller().getUsername().equals(username);
         boolean isRecipient = call.getRecipient().getUsername().equals(username);
         if (!isCaller && !isRecipient) return;
 
-        String targetUser = isCaller ? call.getRecipient().getUsername() : call.getCaller().getUsername();
-        messagingTemplate.convertAndSendToUser(targetUser, "/queue/webrtc-signals", signalData);
+        String targetUser = isCaller ?
+                call.getRecipient().getUsername() : call.getCaller().getUsername();
 
+        messagingTemplate.convertAndSendToUser(targetUser, "/queue/webrtc-signals", signalData);
         log.debug("Signaling forwarded from {} to {} for call {}", username, targetUser, callId);
     }
 
@@ -287,12 +393,6 @@ public class CallServiceImpl implements CallService {
                 .stream()
                 .map(mapper::toDto)
                 .toList();
-    }
-
-    private Call getCallFromActiveOrDb(String callId) {
-        Call call = activeCalls.get(callId);
-        if (call != null) return call;
-        return getCallFromDb(callId);
     }
 
     private Call getCallFromDb(String callId) {
