@@ -20,4 +20,6 @@ public interface FileService {
     FileResponse uploadTranslatorDoc(Long translatorId, MultipartFile file);
     FileResponse uploadMyTranslatorDoc(MultipartFile file);
     Optional<File> findByUserIdAndCategory(Long userId, FileCategory category);
+
+    File findByIdOrThrow(Long id);
 }

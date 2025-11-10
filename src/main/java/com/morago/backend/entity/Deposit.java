@@ -1,6 +1,5 @@
 package com.morago.backend.entity;
 
-
 import com.morago.backend.config.jpa.BigDecimalScale2Converter;
 import com.morago.backend.entity.enumFiles.EStatus;
 import com.morago.backend.listener.Auditable;

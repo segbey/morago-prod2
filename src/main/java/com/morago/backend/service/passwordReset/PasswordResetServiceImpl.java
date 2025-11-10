@@ -70,10 +70,6 @@ public class PasswordResetServiceImpl implements PasswordResetService {
                 .build();
 
         passwordResetRepository.save(pr);
-
-//        if (isDevLike()) {
-//            log.info("[DEV ONLY] Password reset code for {} is {}", phone, code);
-//        }
     }
 
     @Transactional

@@ -3,7 +3,8 @@ package com.morago.backend.mapper;
 import com.morago.backend.dto.FileDto;
 import com.morago.backend.entity.File;
 import com.morago.backend.entity.User;
-import org.mapstruct.*;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface FileMapper {

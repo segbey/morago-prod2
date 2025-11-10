@@ -7,15 +7,16 @@ import com.morago.backend.entity.Language;
 import com.morago.backend.entity.Theme;
 import com.morago.backend.entity.TranslatorProfile;
 import com.morago.backend.entity.User;
-import com.morago.backend.exception.ResourceNotFoundException;
 import com.morago.backend.exception.rating.SelfRatingNotAllowedException;
+import com.morago.backend.exception.translatorprofile.TranslatorProfileAlreadyExistsException;
+import com.morago.backend.exception.translatorprofile.TranslatorProfileNotFoundException;
 import com.morago.backend.mapper.ThemeMapper;
 import com.morago.backend.mapper.TranslatorProfileMapper;
-import com.morago.backend.repository.LanguageRepository;
 import com.morago.backend.repository.ThemeRepository;
 import com.morago.backend.repository.TranslatorProfileRepository;
-import com.morago.backend.repository.UserRepository;
 import com.morago.backend.service.file.FileService;
+import com.morago.backend.service.language.LanguageService;
+import com.morago.backend.service.theme.ThemeService;
 import com.morago.backend.service.user.UserService;
 import com.morago.backend.service.withdrawal.WithdrawalService;
 import io.micrometer.common.lang.Nullable;
@@ -32,15 +33,17 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.morago.backend.entity.enumFiles.FileCategory.AVATAR;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class TranslatorProfileServiceImpl implements TranslatorProfileService {
 
     private final TranslatorProfileRepository profileRepo;
-    private final UserRepository userRepo;
-    private final LanguageRepository languageRepo;
+    private final LanguageService languageService;
     private final ThemeRepository themeRepo;
+    private final ThemeService themeService;
     private final TranslatorProfileMapper mapper;
     private final ThemeMapper themeMapper;
     private final FileService fileService;
@@ -52,30 +55,27 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
 
     @Override
     public TranslatorProfileDto create(TranslatorProfileDto dto) {
-        User user = userRepo.findById(dto.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        User user = userService.findByIdOrThrow(dto.getUserId());
 
         if (profileRepo.existsByUser_Id(user.getId())) {
-            throw new IllegalStateException("User already has a TranslatorProfile");
+            throw new TranslatorProfileAlreadyExistsException(user.getId());
         }
 
-        Set<Language> languages = (dto.getLanguageIds() != null) ?
-                dto.getLanguageIds().stream()
-                        .map(id -> languageRepo.findById(id)
-                                .orElseThrow(() -> new ResourceNotFoundException("Language not found: " + id)))
-                        .collect(Collectors.toSet()) :
-                Set.of();
+        Set<Language> languages = (dto.getLanguageIds() == null) ? Set.of()
+                : dto.getLanguageIds().stream()
+                .distinct()
+                .map(languageService::findByIdOrThrow)
+                .collect(Collectors.toSet());
 
-        Set<Theme> themes = (dto.getThemeIds() != null) ?
-                dto.getThemeIds().stream()
-                        .map(id -> themeRepo.findById(id)
-                                .orElseThrow(() -> new ResourceNotFoundException("Theme not found: " + id)))
-                        .collect(Collectors.toSet()) :
-                Set.of();
+        Set<Theme> themes = (dto.getThemeIds() == null) ? Set.of()
+                : dto.getThemeIds().stream()
+                .distinct()
+                .map(themeService::findByIdOrThrow)
+                .collect(Collectors.toSet());
 
         TranslatorProfile profile = TranslatorProfile.builder()
                 .user(user)
-                .email(dto.getEmail())
+                .email(dto.getEmail() == null ? null : dto.getEmail().trim())
                 .dateOfBirth(dto.getDateOfBirth())
                 .isVerified(Boolean.TRUE.equals(dto.getIsVerified()))
                 .levelOfKorean(dto.getLevelOfKorean())
@@ -89,21 +89,31 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
     @Override
     @Transactional(readOnly = true)
     public TranslatorProfileDto getById(Long id) {
-        TranslatorProfile profile = profileRepo.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
+        TranslatorProfile profile = findProfileByIdOrThrow(id);
         TranslatorProfileDto dto = mapper.toDto(profile);
-        fileService.findByUserIdAndCategory(profile.getUser().getId(), com.morago.backend.entity.enumFiles.FileCategory.AVATAR)
-                .ifPresent(file -> dto.setAvatarUrl(file.getPath()));
+        fileService.findByUserIdAndCategory(
+                profile.getUser().getId(),
+                AVATAR
+        ).ifPresent(file -> dto.setAvatarUrl(file.getPath()));
         return dto;
+    }
+
+    private TranslatorProfile findProfileByIdOrThrow(Long id) {
+        return profileRepo.findById(id)
+                .orElseThrow(() -> new TranslatorProfileNotFoundException(id));
+    }
+
+    private TranslatorProfile findProfileByUserIdOrThrow(Long userId) {
+        return profileRepo.findByUserId(userId)
+                .orElseThrow(() -> new TranslatorProfileNotFoundException("userId=" + userId));
     }
 
     @Override
     @Transactional(readOnly = true)
     public TranslatorProfileDto getByUserId(Long userId) {
-        TranslatorProfile profile = profileRepo.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Translator profile not found for user: " + userId));
+        TranslatorProfile profile = findProfileByUserIdOrThrow(userId);
         TranslatorProfileDto dto = mapper.toDto(profile);
-        fileService.findByUserIdAndCategory(userId, com.morago.backend.entity.enumFiles.FileCategory.AVATAR)
+        fileService.findByUserIdAndCategory(userId, AVATAR)
                 .ifPresent(file -> dto.setAvatarUrl(file.getPath()));
         return dto;
     }
@@ -114,7 +124,7 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
         return profileRepo.findAll().stream()
                 .map(profile -> {
                     TranslatorProfileDto dto = mapper.toDto(profile);
-                    fileService.findByUserIdAndCategory(profile.getUser().getId(), com.morago.backend.entity.enumFiles.FileCategory.AVATAR)
+                    fileService.findByUserIdAndCategory(profile.getUser().getId(), AVATAR)
                             .ifPresent(file -> dto.setAvatarUrl(file.getPath()));
                     return dto;
                 })
@@ -126,7 +136,7 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
     public Page<TranslatorProfileDto> getAll(Pageable pageable) {
         return profileRepo.findAll(pageable).map(profile -> {
             TranslatorProfileDto dto = mapper.toDto(profile);
-            fileService.findByUserIdAndCategory(profile.getUser().getId(), com.morago.backend.entity.enumFiles.FileCategory.AVATAR)
+            fileService.findByUserIdAndCategory(profile.getUser().getId(), AVATAR)
                     .ifPresent(file -> dto.setAvatarUrl(file.getPath()));
             return dto;
         });
@@ -138,7 +148,7 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
         return profileRepo.findByIsOnlineTrue().stream()
                 .map(profile -> {
                     TranslatorProfileDto dto = mapper.toDto(profile);
-                    fileService.findByUserIdAndCategory(profile.getUser().getId(), com.morago.backend.entity.enumFiles.FileCategory.AVATAR)
+                    fileService.findByUserIdAndCategory(profile.getUser().getId(), AVATAR)
                             .ifPresent(file -> dto.setAvatarUrl(file.getPath()));
                     return dto;
                 })
@@ -151,7 +161,7 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
         return profileRepo.findByThemes_Id(themeId).stream()
                 .map(profile -> {
                     TranslatorProfileDto dto = mapper.toDto(profile);
-                    fileService.findByUserIdAndCategory(profile.getUser().getId(), com.morago.backend.entity.enumFiles.FileCategory.AVATAR)
+                    fileService.findByUserIdAndCategory(profile.getUser().getId(), AVATAR)
                             .ifPresent(file -> dto.setAvatarUrl(file.getPath()));
                     return dto;
                 })
@@ -164,7 +174,7 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
         return profileRepo.findByLanguages_Id(languageId).stream()
                 .map(profile -> {
                     TranslatorProfileDto dto = mapper.toDto(profile);
-                    fileService.findByUserIdAndCategory(profile.getUser().getId(), com.morago.backend.entity.enumFiles.FileCategory.AVATAR)
+                    fileService.findByUserIdAndCategory(profile.getUser().getId(), AVATAR)
                             .ifPresent(file -> dto.setAvatarUrl(file.getPath()));
                     return dto;
                 })
@@ -182,9 +192,7 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
     @Override
     @Transactional(readOnly = true)
     public TranslatorProfile getForRatingOrThrow(Long translatorProfileId, Long currentUserId) {
-        TranslatorProfile translator = profileRepo.findById(translatorProfileId)
-                .orElseThrow(() -> new ResourceNotFoundException("Translator not found"));
-
+        var translator = findProfileByIdOrThrow(translatorProfileId);
         if (translator.getUser() != null && translator.getUser().getId().equals(currentUserId)) {
             throw new SelfRatingNotAllowedException();
         }
@@ -211,14 +219,15 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
                         languageIds, themeId, online, verified, required, safe)
                 .map(profile -> {
                     TranslatorProfileDto dto = mapper.toDto(profile);
-                    fileService.findByUserIdAndCategory(profile.getUser().getId(), com.morago.backend.entity.enumFiles.FileCategory.AVATAR)
+                    fileService.findByUserIdAndCategory(profile.getUser().getId(), AVATAR)
                             .ifPresent(file -> dto.setAvatarUrl(file.getPath()));
                     return dto;
                 });
     }
 
     private Pageable sanitize(Pageable p) {
-        Sort safeSort = (p.getSort() == null || p.getSort().isUnsorted())
+        p.getSort();
+        Sort safeSort = p.getSort().isUnsorted()
                 ? Sort.by(Sort.Order.desc("ratingAvg"), Sort.Order.desc("ratingCount"))
                 : Sort.by(
                 p.getSort().stream()
@@ -235,11 +244,8 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
 
     @Override
     public void updateTranslatorStatus(Long userId, Boolean isOnline) {
-        User user = userRepo.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
-        TranslatorProfile profile = profileRepo.findByUser(user)
-                .orElseThrow(() -> new ResourceNotFoundException("Translator profile not found for user: " + userId));
-
+        User user = userService.findByIdOrThrow(userId);
+        TranslatorProfile profile = findProfileByUserIdOrThrow(user.getId());
         profile.setIsOnline(isOnline);
         profileRepo.save(profile);
     }
@@ -247,8 +253,7 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
     @Override
     @Transactional(readOnly = true)
     public List<ThemeDto> getMyThemes(Long userId) {
-        TranslatorProfile profile = profileRepo.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Translator profile not found for user: " + userId));
+        TranslatorProfile profile = findProfileByUserIdOrThrow(userId);
         return profile.getThemes().stream()
                 .map(themeMapper::toDto)
                 .toList();
@@ -256,12 +261,11 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
 
     @Override
     public void updateMyThemes(Long userId, Set<Long> themeIds) {
-        TranslatorProfile profile = profileRepo.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Translator profile not found for user: " + userId));
+        TranslatorProfile profile = findProfileByUserIdOrThrow(userId);
 
-        Set<Theme> newThemes = themeIds.stream()
-                .map(id -> themeRepo.findById(id)
-                        .orElseThrow(() -> new ResourceNotFoundException("Theme not found with ID: " + id)))
+        Set<Theme> newThemes = (themeIds == null ? Set.<Long>of() : themeIds).stream()
+                .distinct()
+                .map(themeService::findByIdOrThrow)
                 .collect(Collectors.toSet());
 
         profile.setThemes(newThemes);
@@ -287,8 +291,7 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
     @Override
     public void changeStatus(boolean isOnline) {
         User currentUser = userService.getCurrentUser();
-        TranslatorProfile profile = profileRepo.findByUserId(currentUser.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Translator profile not found for current user"));
+        TranslatorProfile profile = findProfileByUserIdOrThrow(currentUser.getId());
         profile.setIsOnline(isOnline);
         profileRepo.save(profile);
     }
@@ -304,11 +307,11 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
     @Override
     public void updateMyThemes(List<Long> themeIds) {
         User currentUser = userService.getCurrentUser();
-        TranslatorProfile profile = profileRepo.findByUserId(currentUser.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Translator profile not found for current user"));
-        Set<Theme> newThemes = themeIds.stream()
-                .map(id -> themeRepo.findById(id)
-                        .orElseThrow(() -> new ResourceNotFoundException("Theme not found with ID: " + id)))
+        TranslatorProfile profile = findProfileByUserIdOrThrow(currentUser.getId());
+        Set<Theme> newThemes = (themeIds == null ? List.<Long>of() : themeIds)
+                .stream()
+                .distinct()
+                .map(themeService::findByIdOrThrow)
                 .collect(Collectors.toSet());
         profile.setThemes(newThemes);
         profileRepo.save(profile);

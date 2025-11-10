@@ -1,5 +1,6 @@
 package com.morago.backend.config;
 
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.server.ServerHttpRequest;
@@ -44,8 +45,10 @@ public class CustomHandshakeHandler extends DefaultHandshakeHandler {
     }
 
     public static class UserPrincipal implements Principal {
+        @Getter
         private final Long userId;
         private final String username;
+        @Getter
         private final String role;
 
         public UserPrincipal(Long userId, String username, String role) {
@@ -57,14 +60,6 @@ public class CustomHandshakeHandler extends DefaultHandshakeHandler {
         @Override
         public String getName() {
             return username;
-        }
-
-        public Long getUserId() {
-            return userId;
-        }
-
-        public String getRole() {
-            return role;
         }
     }
 }

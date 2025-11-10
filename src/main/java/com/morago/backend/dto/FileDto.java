@@ -11,6 +11,5 @@ public class FileDto {
     private String type;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-
     private Long userId;
 }

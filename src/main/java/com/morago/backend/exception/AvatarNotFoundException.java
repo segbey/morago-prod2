@@ -1,6 +1,4 @@
-package com.morago.backend.exception.file;
-
-import com.morago.backend.exception.ResourceNotFoundException;
+package com.morago.backend.exception;
 
 public class AvatarNotFoundException extends ResourceNotFoundException {
     public AvatarNotFoundException(Long userId) {

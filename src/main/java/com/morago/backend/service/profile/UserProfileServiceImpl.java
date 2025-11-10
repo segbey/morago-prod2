@@ -1,15 +1,11 @@
 package com.morago.backend.service.profile;
 
-import com.morago.backend.dto.user.UserProfileDto;
 import com.morago.backend.entity.UserProfile;
 import com.morago.backend.exception.ResourceNotFoundException;
 import com.morago.backend.repository.UserProfileRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
