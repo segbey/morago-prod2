@@ -1,6 +1,8 @@
 package com.morago.backend.service.admin;
 
 import com.morago.backend.dto.admin.AdminTranslatorDto;
+import com.morago.backend.dto.admin.AdminUpdateTranslatorDto;
+import com.morago.backend.dto.admin.AdminUpdateUserDto;
 import com.morago.backend.dto.admin.AdminUserDto;
 import com.morago.backend.dto.billing.transaction.TransactionAdminDto;
 import com.morago.backend.dto.billing.withdrawal.WithdrawalDto;
@@ -16,7 +18,7 @@ public interface AdminService {
 
     Page<UserDto> listUsers(Pageable pageable);
     UserDto createUser(AdminUserDto dto);
-    //    UserDto updateUser(Long id, UserDto req);
+    UserDto updateUser(Long userId, AdminUpdateUserDto req);
     void deleteUser(Long id);
     void setUserActive(Long userId, boolean active);
 
@@ -26,7 +28,10 @@ public interface AdminService {
     TranslatorProfileDto createTranslator(AdminTranslatorDto req,
                                           MultipartFile avatar,
                                           MultipartFile[] docs);
-    //    TranslatorProfileDto updateTranslator(Long id, TranslatorProfileDto dto);
+    TranslatorProfileDto updateTranslator(Long translatorProfileId,
+                                          AdminUpdateTranslatorDto req,
+                                          MultipartFile avatar,
+                                          MultipartFile[] docs);
     void deleteTranslator(Long id);
     void approveTranslator(Long id);
     void declineTranslator(Long id);

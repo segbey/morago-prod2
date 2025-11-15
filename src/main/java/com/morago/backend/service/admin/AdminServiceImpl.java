@@ -1,6 +1,8 @@
 package com.morago.backend.service.admin;
 
 import com.morago.backend.dto.admin.AdminTranslatorDto;
+import com.morago.backend.dto.admin.AdminUpdateTranslatorDto;
+import com.morago.backend.dto.admin.AdminUpdateUserDto;
 import com.morago.backend.dto.admin.AdminUserDto;
 import com.morago.backend.dto.billing.transaction.TransactionAdminDto;
 import com.morago.backend.dto.billing.withdrawal.WithdrawalDto;
@@ -10,6 +12,7 @@ import com.morago.backend.dto.user.UserDto;
 import com.morago.backend.entity.*;
 import com.morago.backend.entity.enumFiles.FileCategory;
 import com.morago.backend.entity.enumFiles.Roles;
+import com.morago.backend.exception.ResourceAlreadyExistsException;
 import com.morago.backend.exception.ResourceNotFoundException;
 import com.morago.backend.exception.phonenumber.PhoneAlreadyExistsException;
 import com.morago.backend.mapper.*;
@@ -90,6 +93,38 @@ public class AdminServiceImpl implements AdminService {
 
         Role defaultRole = roleService.getRoleOrThrow(Roles.ROLE_USER);
         user.getRoles().add(defaultRole);
+
+        User saved = userRepository.save(user);
+        return userMapper.toDto(saved);
+    }
+
+    @Override
+    @Transactional
+    public UserDto updateUser(Long userId, AdminUpdateUserDto req) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+
+        // firstName / lastName
+        if (req.getFirstName() != null) user.setFirstName(req.getFirstName().trim());
+        if (req.getLastName()  != null) user.setLastName(req.getLastName().trim());
+
+        // phone change (username in your model)
+        if (req.getPhoneNumber() != null && !req.getPhoneNumber().equals(user.getUsername())) {
+            if (userRepository.existsByUsername(req.getPhoneNumber())) {
+                throw new ResourceAlreadyExistsException("Username/phone already exists: " + req.getPhoneNumber());
+            }
+            user.setUsername(req.getPhoneNumber());
+        }
+
+        // password (only if provided & not blank)
+        if (req.getPassword() != null && !req.getPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode(req.getPassword()));
+        }
+
+        // absolute balance set (if provided)
+        if (req.getBalance() != null) {
+            user.setBalance(req.getBalance());
+        }
 
         User saved = userRepository.save(user);
         return userMapper.toDto(saved);
@@ -178,12 +213,86 @@ public class AdminServiceImpl implements AdminService {
         return translatorProfileMapper.toDto(translatorProfileRepository.save(profile));
     }
 
-    //    @Override
-//    @Transactional
-//    public TranslatorProfileDto updateTranslator(Long id, TranslatorProfileDto dto) {
-//        return translatorProfileService.update(id, dto);
-//    }
-//
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public TranslatorProfileDto updateTranslator(Long translatorProfileId,
+                                                 AdminUpdateTranslatorDto req,
+                                                 MultipartFile avatar,
+                                                 MultipartFile[] docs) {
+
+        TranslatorProfile profile = translatorProfileRepository.findById(translatorProfileId)
+                .orElseThrow(() -> new ResourceNotFoundException("TranslatorProfile", translatorProfileId));
+
+        User user = profile.getUser();
+
+        // 1) Update basic user fields
+        if (req.getFirstName() != null) user.setFirstName(req.getFirstName().trim());
+        if (req.getLastName()  != null) user.setLastName(req.getLastName().trim());
+
+        if (req.getPhoneNumber() != null && !req.getPhoneNumber().equals(user.getUsername())) {
+            // uniqueness check excluding current user
+            if (userRepository.existsByUsername(req.getPhoneNumber())) {
+                throw new ResourceAlreadyExistsException("Username/phone already exists: " + req.getPhoneNumber());
+            }
+            user.setUsername(req.getPhoneNumber());
+        }
+
+        if (req.getPassword() != null && !req.getPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode(req.getPassword()));
+        }
+
+        // 2) Update translator profile fields
+        if (req.getDateOfBirth() != null) {
+            profile.setDateOfBirth(req.getDateOfBirth());
+        }
+
+        if (req.getLevelOfKorean() != null && !req.getLevelOfKorean().isBlank()) {
+            profile.setLevelOfKorean(req.getLevelOfKorean().toUpperCase());
+        }
+
+        // 3) Replace languages if provided (null = ignore)
+        if (req.getLanguageIds() != null) {
+            if (req.getLanguageIds().isEmpty()) {
+                throw new IllegalArgumentException("languageIds cannot be empty if provided");
+            }
+            List<Language> langs = languageRepository.findAllById(req.getLanguageIds());
+            if (langs.size() != req.getLanguageIds().size()) {
+                throw new ResourceNotFoundException("One or more languages not found");
+            }
+            profile.setLanguages(new HashSet<>(langs));
+        }
+
+        // 4) Replace themes if provided (null = ignore)
+        if (req.getThemeIds() != null) {
+            if (req.getThemeIds().isEmpty()) {
+                throw new IllegalArgumentException("themeIds cannot be empty if provided");
+            }
+            List<Theme> themes = themeRepository.findAllById(req.getThemeIds());
+            if (themes.size() != req.getThemeIds().size()) {
+                throw new ResourceNotFoundException("One or more themes not found");
+            }
+            profile.setThemes(new HashSet<>(themes));
+        }
+
+        // 5) Persist user + profile
+        userRepository.save(user);
+        profile = translatorProfileRepository.save(profile);
+
+        // 6) Optional uploads (remain inside TX; fileService should throw on error to rollback)
+        if (avatar != null && !avatar.isEmpty()) {
+            fileService.uploadAvatar(user.getId(), avatar);
+        }
+        if (docs != null) {
+            for (MultipartFile doc : docs) {
+                if (doc != null && !doc.isEmpty()) {
+                    fileService.uploadTranslatorDoc(user.getId(), doc);
+                }
+            }
+        }
+
+        return translatorProfileMapper.toDto(profile);
+    }
+
     @Override
     @Transactional
     public void deleteTranslator(Long userId) {

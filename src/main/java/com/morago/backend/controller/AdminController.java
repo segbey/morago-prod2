@@ -4,6 +4,8 @@ import com.morago.backend.dto.CategoryDto;
 import com.morago.backend.dto.LanguageDto;
 import com.morago.backend.dto.ThemeDto;
 import com.morago.backend.dto.admin.AdminTranslatorDto;
+import com.morago.backend.dto.admin.AdminUpdateTranslatorDto;
+import com.morago.backend.dto.admin.AdminUpdateUserDto;
 import com.morago.backend.dto.admin.AdminUserDto;
 import com.morago.backend.dto.billing.transaction.TransactionAdminDto;
 import com.morago.backend.dto.billing.withdrawal.WithdrawalDto;
@@ -83,11 +85,23 @@ public class AdminController {
         return ResponseEntity.ok(created);
     }
 
-//    @PutMapping("/users/{id}")
-//    @Operation(summary = "Update an existing user")
-//    public ResponseEntity<UserDto> updateUser(@PathVariable Long id, @RequestBody UserDto userDto) {
-//        return ResponseEntity.ok(adminService.updateUser(id, userDto));
-//    }
+    @PutMapping(value = "/users/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Update a user (admin). Supports optional avatar upload.")
+    public ResponseEntity<UserDto> updateUser(
+            @PathVariable Long id,
+            @RequestPart("user") @Valid AdminUpdateUserDto req,
+            @RequestPart(value = "avatar", required = false) MultipartFile avatar
+    ) {
+        UserDto updated = adminService.updateUser(id, req);
+
+        if (avatar != null && !avatar.isEmpty()) {
+            fileService.uploadAvatar(updated.getId(), avatar);
+            // If your UserDto exposes avatarUrl, you can re-fetch to include the new URL:
+            // updated = adminService.getUser(updated.getId());
+        }
+
+        return ResponseEntity.ok(updated);
+    }
 
     @DeleteMapping("/users/{id}")
     @Operation(summary = "Delete a user")
@@ -122,12 +136,6 @@ public class AdminController {
         return ResponseEntity.ok(adminService.getTranslator(id));
     }
 
-//    @PostMapping("/translators")
-//    @Operation(summary = "Create a new translator profile")
-//    public ResponseEntity<TranslatorProfileDto> createTranslator(@RequestBody TranslatorProfileDto dto) {
-//        return ResponseEntity.status(201).body(adminService.createTranslator(dto));
-//    }
-
     @PostMapping(value = "/translators", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Create a translator (admin) with avatar and documents; fully transactional")
     public ResponseEntity<TranslatorProfileDto> createTranslator(
@@ -139,11 +147,18 @@ public class AdminController {
         return ResponseEntity.status(201).body(created);
     }
 
-//    @PutMapping("/translators/{id}")
-//    @Operation(summary = "Update translator profile")
-//    public ResponseEntity<TranslatorProfileDto> updateTranslator(@PathVariable Long id, @RequestBody TranslatorProfileDto dto) {
-//        return ResponseEntity.ok(adminService.updateTranslator(id, dto));
-//    }
+
+    @PutMapping(value = "/translators/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Update a translator (admin). Supports optional avatar and documents.")
+    public ResponseEntity<TranslatorProfileDto> updateTranslator(
+            @PathVariable("id") Long translatorProfileId,
+            @RequestPart("translator") @Valid AdminUpdateTranslatorDto req,
+            @RequestPart(value = "avatar", required = false) MultipartFile avatar,
+            @RequestPart(value = "docs", required = false) MultipartFile[] docs
+    ) {
+        TranslatorProfileDto updated = adminService.updateTranslator(translatorProfileId, req, avatar, docs);
+        return ResponseEntity.ok(updated);
+    }
 
     @DeleteMapping("/translators/{id}")
     @Operation(summary = "Delete translator profile")
