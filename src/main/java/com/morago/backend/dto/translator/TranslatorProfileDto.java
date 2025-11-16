@@ -10,6 +10,7 @@ import java.util.Set;
 @Data
 public class TranslatorProfileDto {
     private Long id;
+    private String name;
     private LocalDateTime createdAt;
     private LocalDate dateOfBirth;
     private String email;
