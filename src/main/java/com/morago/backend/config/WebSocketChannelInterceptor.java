@@ -24,22 +24,42 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
     public Message<?> preSend(@NonNull Message<?> message, @NonNull MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
-        if (accessor != null && StompCommand.SEND.equals(accessor.getCommand())) {
-            String destination = accessor.getDestination();
+        if (accessor != null) {
+            StompCommand command = accessor.getCommand();
             Principal principal = accessor.getUser();
+            String username = principal != null ? principal.getName() : "anonymous";
+            String sessionId = accessor.getSessionId();
 
-            if (destination != null && (destination.startsWith("/app/webrtc.") ||
-                    destination.equals("/app/call.accept") ||
-                    destination.equals("/app/call.reject") ||
-                    destination.equals("/app/call.end"))) {
+            if (StompCommand.SUBSCRIBE.equals(command)) {
+                String destination = accessor.getDestination();
+                String subscriptionId = accessor.getSubscriptionId();
+                log.info("SUBSCRIBE - sessionId: {}, username: {}, destination: {}, subscriptionId: {}",
+                        sessionId, username, destination, subscriptionId);
+            } else if (StompCommand.UNSUBSCRIBE.equals(command)) {
+                String subscriptionId = accessor.getSubscriptionId();
+                log.info("UNSUBSCRIBE - sessionId: {}, username: {}, subscriptionId: {}",
+                        sessionId, username, subscriptionId);
+            } else if (StompCommand.MESSAGE.equals(command)) {
+                String destination = accessor.getDestination();
+                log.debug("MESSAGE - sessionId: {}, destination: {}", sessionId, destination);
+            } else if (StompCommand.SEND.equals(command)) {
+                String destination = accessor.getDestination();
 
-                Object payload = message.getPayload();
-                if (payload instanceof byte[]) {
-                    log.debug("WebRTC message to {}: {}", destination, new String((byte[]) payload));
+                if (destination != null && (destination.startsWith("/app/webrtc.") ||
+                        destination.equals("/app/call.accept") ||
+                        destination.equals("/app/call.reject") ||
+                        destination.equals("/app/call.end"))) {
+
+                    Object payload = message.getPayload();
+                    if (payload instanceof byte[]) {
+                        log.debug("SEND - sessionId: {}, username: {}, destination: {}, payload: {}",
+                                sessionId, username, destination, new String((byte[]) payload));
+                    }
                 }
             }
         }
 
-        return message;
-    }
+            return message;
+        }
+
 }

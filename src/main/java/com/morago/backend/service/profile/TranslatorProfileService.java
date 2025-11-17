@@ -9,7 +9,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import com.morago.backend.dto.billing.withdrawal.CreateWithdrawalRequest;
 import org.springframework.web.multipart.MultipartFile;
-
+import com.morago.backend.dto.translator.TranslatorAvailabilityRequestDto;
+import com.morago.backend.dto.translator.TranslatorAvailabilityResponseDto;
+import com.morago.backend.dto.translator.TranslatorLanguagesRequestDto;
+import com.morago.backend.dto.translator.TranslatorLanguagesResponseDto;
+import com.morago.backend.dto.translator.TranslatorThemesResponseDto;
+import com.morago.backend.dto.translator.TranslatorThemesUpdateRequest;
+import com.morago.backend.dto.translator.TranslatorKoreanLevelResponseDto;
+import com.morago.backend.dto.translator.TranslatorBasicInfoResponseDto;
+import com.morago.backend.dto.translator.TranslatorBasicInfoRequestDto;
+import com.morago.backend.dto.translator.TranslatorKoreanLevelRequestDto;
 import java.util.List;
 import java.util.Set;
 
@@ -22,20 +31,27 @@ public interface TranslatorProfileService {
     TranslatorProfileDto getByUserId(Long userId);
 
     void changeStatus(boolean isOnline);
+
     List<ThemeDto> getAvailableThemes();
+
     void updateMyThemes(List<Long> themeIds);
+
     void updateAvatar(String avatarUrl);
 
 
     List<TranslatorProfileDto> getAll();
+
     Page<TranslatorProfileDto> getAll(Pageable pageable);
 
     List<TranslatorProfileDto> getOnlineTranslators();
+
     List<TranslatorProfileDto> getTranslatorsByTheme(Long themeId);
+
     List<TranslatorProfileDto> getTranslatorsByLanguage(Long languageId);
 
 
     void setOnlineStatus(User user, boolean b);
+
     TranslatorProfile getForRatingOrThrow(Long translatorProfileId, Long currentUserId);
 
     Page<TranslatorProfileDto> searchTranslators(
@@ -47,9 +63,22 @@ public interface TranslatorProfileService {
     );
 
     void updateTranslatorStatus(Long userId, Boolean isOnline);
+
     List<ThemeDto> getMyThemes(Long userId);
+
     void updateMyThemes(Long userId, Set<Long> themeIds);
+
     String updateMyAvatar(Long userId, MultipartFile avatarFile);
+
     Long requestTranslatorWithdrawal(Long userId, CreateWithdrawalRequest dto);
 
+    TranslatorAvailabilityResponseDto updateOnlineStatus(TranslatorAvailabilityRequestDto dto);
+
+    TranslatorLanguagesResponseDto updateLanguages(TranslatorLanguagesRequestDto dto);
+
+    TranslatorThemesResponseDto updateThemes(TranslatorThemesUpdateRequest dto);
+
+    TranslatorKoreanLevelResponseDto updateKoreanLevel(TranslatorKoreanLevelRequestDto dto);
+
+    TranslatorBasicInfoResponseDto updateBasicInfo(TranslatorBasicInfoRequestDto dto);
 }

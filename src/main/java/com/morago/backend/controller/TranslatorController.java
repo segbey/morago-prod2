@@ -1,22 +1,18 @@
 package com.morago.backend.controller;
+
 import com.morago.backend.dto.billing.withdrawal.CreateWithdrawalRequest;
+import com.morago.backend.dto.translator.*;
 import com.morago.backend.dto.user.UserUpdateProfileRequestDto;
 import com.morago.backend.dto.user.UserUpdateProfileResponseDto;
 import com.morago.backend.service.profile.TranslatorProfileService;
 import com.morago.backend.service.user.UserService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import com.morago.backend.dto.translator.TranslatorAvailabilityRequestDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/translators")
@@ -25,15 +21,6 @@ public class TranslatorController {
     private final TranslatorProfileService translatorProfileService;
     private final UserService userService;
 
-    @Operation(
-            summary = "Request withdrawal",
-            description = "Submit a withdrawal request for translator earnings.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Withdrawal request submitted successfully"),
-                    @ApiResponse(responseCode = "400", description = "Invalid withdrawal request"),
-                    @ApiResponse(responseCode = "403", description = "Forbidden - Translator access required")
-            }
-    )
     @PostMapping("/withdrawal-request")
     @PreAuthorize("hasRole('TRANSLATOR')")
     public ResponseEntity<Long> requestWithdrawal(
@@ -44,21 +31,58 @@ public class TranslatorController {
         return ResponseEntity.ok(withdrawalId);
     }
 
-    @Operation(
-            summary = "Update my profile",
-            description = "Update profile of currently authenticated user.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Profile updated successfully"),
-                    @ApiResponse(responseCode = "400", description = "Validation error"),
-                    @ApiResponse(responseCode = "401", description = "Unauthorized")
-            }
-    )
     @PutMapping("/update/profile")
     @PreAuthorize("hasAnyRole('TRANSLATOR','ADMIN')")
     public ResponseEntity<UserUpdateProfileResponseDto> updateMyProfile(
             @Valid @RequestBody UserUpdateProfileRequestDto dto
     ) {
         UserUpdateProfileResponseDto response = userService.updateMyProfile(dto);
+        return ResponseEntity.ok(response);
+    }
+
+
+    @PutMapping("/update/online-status")
+    @PreAuthorize("hasRole('TRANSLATOR')")
+    public ResponseEntity<TranslatorAvailabilityResponseDto> updateOnlineStatus(
+            @Valid @RequestBody TranslatorAvailabilityRequestDto dto
+    ) {
+        TranslatorAvailabilityResponseDto response = translatorProfileService.updateOnlineStatus(dto);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/update/languages")
+    @PreAuthorize("hasRole('TRANSLATOR')")
+    public ResponseEntity<TranslatorLanguagesResponseDto> updateLanguages(
+            @Valid @RequestBody TranslatorLanguagesRequestDto dto
+    ) {
+        TranslatorLanguagesResponseDto response = translatorProfileService.updateLanguages(dto);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/update/themes")
+    @PreAuthorize("hasRole('TRANSLATOR')")
+    public ResponseEntity<TranslatorThemesResponseDto> updateThemes(
+            @Valid @RequestBody TranslatorThemesUpdateRequest dto
+    ) {
+        TranslatorThemesResponseDto response = translatorProfileService.updateThemes(dto);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/update/korean-level")
+    @PreAuthorize("hasRole('TRANSLATOR')")
+    public ResponseEntity<TranslatorKoreanLevelResponseDto> updateKoreanLevel(
+            @Valid @RequestBody TranslatorKoreanLevelRequestDto dto
+    ) {
+        TranslatorKoreanLevelResponseDto response = translatorProfileService.updateKoreanLevel(dto);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/update/basic-info")
+    @PreAuthorize("hasRole('TRANSLATOR')")
+    public ResponseEntity<TranslatorBasicInfoResponseDto> updateBasicInfo(
+            @Valid @RequestBody TranslatorBasicInfoRequestDto dto
+    ) {
+        TranslatorBasicInfoResponseDto response = translatorProfileService.updateBasicInfo(dto);
         return ResponseEntity.ok(response);
     }
 }

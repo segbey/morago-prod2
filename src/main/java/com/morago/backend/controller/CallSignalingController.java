@@ -83,11 +83,14 @@ public class CallSignalingController {
         log.info("Call {} accepted by {}", request.getCallId(), principal.getName());
         callAccessService.validateCallAccess(request.getCallId(), principal);
 
+        String callIdStr = request.getCallId().toString();
+        callService.acceptCall(callIdStr, principal.getName());
+
         String otherUser = callAccessService.getOtherParticipant(request.getCallId(), principal);
 
         CallNotificationMessage notification = CallNotificationMessage.builder()
                 .type("CALL_ACCEPTED")
-                .callId(request.getCallId().toString())
+                .callId(callIdStr)
                 .build();
 
         messagingTemplate.convertAndSendToUser(otherUser, "/queue/call-notifications", notification);
@@ -101,11 +104,13 @@ public class CallSignalingController {
 
         callAccessService.validateCallAccess(request.getCallId(), principal);
 
+        String callIdStr = request.getCallId().toString();
+        callService.rejectCall(callIdStr, principal.getName());
         String otherUser = callAccessService.getOtherParticipant(request.getCallId(), principal);
 
         CallNotificationMessage notification = CallNotificationMessage.builder()
                 .type("CALL_REJECTED")
-                .callId(request.getCallId().toString())
+                .callId(callIdStr)
                 .build();
 
         messagingTemplate.convertAndSendToUser(otherUser, "/queue/call-notifications", notification);
@@ -117,11 +122,13 @@ public class CallSignalingController {
         log.info("Call {} ended by {}", request.getCallId(), principal.getName());
         callAccessService.validateCallAccess(request.getCallId(), principal);
 
+        String callIdStr = request.getCallId().toString();
+        callService.endCall(callIdStr, principal.getName());
         String otherUser = callAccessService.getOtherParticipant(request.getCallId(), principal);
 
         CallNotificationMessage notification = CallNotificationMessage.builder()
                 .type("CALL_ENDED")
-                .callId(request.getCallId().toString())
+                .callId(callIdStr)
                 .build();
 
         messagingTemplate.convertAndSendToUser(otherUser, "/queue/call-notifications", notification);

@@ -214,10 +214,13 @@ public class CallServiceImpl implements CallService {
         call.setTranslatorHasJoined(true);
         call.setStatus(true);
 
-        if (session != null) {
-            session.acceptedTime = LocalDateTime.now();
-            session.translatorJoined = true;
+        if (session == null) {
+            session = new CallSessionData(call);
+            activeCalls.put(callId, session);
+            log.info("Recreated session for call {}", callId);
         }
+        session.acceptedTime = LocalDateTime.now();
+        session.translatorJoined = true;
 
         call = callRepository.save(call);
         log.info("Call accepted: callId={}, status={}, translatorJoined={}",
