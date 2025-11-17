@@ -21,6 +21,8 @@ public interface TranslatorProfileRepository extends JpaRepository<TranslatorPro
 
     Optional<TranslatorProfile> findByUserId(Long userId);
     Optional<TranslatorProfile> findByUser(User user);
+    Optional<TranslatorProfile> findByEmail(String email);
+
     boolean existsByUser_Id(Long userId);
 
 

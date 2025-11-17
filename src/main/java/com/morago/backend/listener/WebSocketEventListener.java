@@ -11,6 +11,8 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
+import org.springframework.web.socket.messaging.SessionSubscribeEvent;
+import org.springframework.web.socket.messaging.SessionUnsubscribeEvent;
 import java.time.LocalDateTime;
 
 @Component
@@ -25,8 +27,10 @@ public class WebSocketEventListener {
     public void handleWebSocketConnectListener(SessionConnectedEvent event) {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
         String sessionId = headerAccessor.getSessionId();
+        java.security.Principal user = headerAccessor.getUser();
+        String username = (user != null) ? user.getName() : "unknown";
 
-        logger.info("Received a new web socket connection with session ID: {}", sessionId);
+        logger.info("WebSocket connected - sessionId: {}, username: {}", sessionId, username);
 
 
     }
@@ -49,5 +53,29 @@ public class WebSocketEventListener {
 
             messagingTemplate.convertAndSend("/topic/user-status", disconnectMessage);
         }
+    }
+    @EventListener
+    public void handleSessionSubscribeEvent(SessionSubscribeEvent event) {
+        StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
+        String sessionId = headerAccessor.getSessionId();
+        String destination = headerAccessor.getDestination();
+        java.security.Principal user = headerAccessor.getUser();
+        String username = user != null ? user.getName() : "unknown";
+        String subscriptionId = headerAccessor.getSubscriptionId();
+
+        logger.info("Client subscribed - sessionId: {}, username: {}, destination: {}, subscriptionId: {}",
+                sessionId, username, destination, subscriptionId);
+    }
+
+    @EventListener
+    public void handleSessionUnsubscribeEvent(SessionUnsubscribeEvent event) {
+        StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
+        String sessionId = headerAccessor.getSessionId();
+        java.security.Principal user = headerAccessor.getUser();
+        String username = user != null ? user.getName() : "unknown";
+        String subscriptionId = headerAccessor.getSubscriptionId();
+
+        logger.info("Client unsubscribed - sessionId: {}, username: {}, subscriptionId: {}",
+                sessionId, username, subscriptionId);
     }
 }

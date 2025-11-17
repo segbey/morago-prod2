@@ -28,6 +28,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import com.morago.backend.dto.translator.*;
+
 
 import java.util.List;
 import java.util.Set;
@@ -288,6 +290,7 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
         );
     }
 
+
     @Override
     public void changeStatus(boolean isOnline) {
         User currentUser = userService.getCurrentUser();
@@ -321,4 +324,101 @@ public class TranslatorProfileServiceImpl implements TranslatorProfileService {
     public void updateAvatar(String avatarUrl) {
         throw new UnsupportedOperationException("Updating avatar by URL is not supported. Please use the file upload endpoint.");
     }
+    @Override
+    public TranslatorAvailabilityResponseDto updateOnlineStatus(TranslatorAvailabilityRequestDto dto) {
+        User currentUser = userService.getCurrentUser();
+        TranslatorProfile profile = findProfileByUserIdOrThrow(currentUser.getId());
+
+        profile.setIsOnline(dto.getIsOnline());
+        profileRepo.save(profile);
+
+        return TranslatorAvailabilityResponseDto.builder()
+                .isOnline(dto.getIsOnline())
+                .message("Online status updated successfully")
+                .build();
+    }
+
+    @Override
+    public TranslatorLanguagesResponseDto updateLanguages(TranslatorLanguagesRequestDto dto) {
+        User currentUser = userService.getCurrentUser();
+        TranslatorProfile profile = findProfileByUserIdOrThrow(currentUser.getId());
+
+        Set<Language> languages = (dto.getLanguageIds() == null ? Set.<Long>of() : dto.getLanguageIds())
+                .stream()
+                .distinct()
+                .map(languageService::findByIdOrThrow)
+                .collect(Collectors.toSet());
+
+        profile.setLanguages(languages);
+        profileRepo.save(profile);
+
+        return TranslatorLanguagesResponseDto.builder()
+                .languageIds(dto.getLanguageIds())
+                .message("Languages updated successfully")
+                .build();
+    }
+
+    @Override
+    public TranslatorThemesResponseDto updateThemes(TranslatorThemesUpdateRequest dto) {
+        User currentUser = userService.getCurrentUser();
+        TranslatorProfile profile = findProfileByUserIdOrThrow(currentUser.getId());
+
+        Set<Theme> themes = (dto.getThemeIds() == null ? Set.<Long>of() : dto.getThemeIds())
+                .stream()
+                .distinct()
+                .map(themeService::findByIdOrThrow)
+                .collect(Collectors.toSet());
+
+        profile.setThemes(themes);
+        profileRepo.save(profile);
+
+        return TranslatorThemesResponseDto.builder()
+                .themeIds(dto.getThemeIds())
+                .message("Themes updated successfully")
+                .build();
+    }
+
+    @Override
+    public TranslatorKoreanLevelResponseDto updateKoreanLevel(TranslatorKoreanLevelRequestDto dto) {
+        User currentUser = userService.getCurrentUser();
+        TranslatorProfile profile = findProfileByUserIdOrThrow(currentUser.getId());
+
+        profile.setLevelOfKorean(dto.getLevelOfKorean());
+        profileRepo.save(profile);
+
+        return TranslatorKoreanLevelResponseDto.builder()
+                .levelOfKorean(dto.getLevelOfKorean())
+                .message("Korean level updated successfully")
+                .build();
+    }
+
+    @Override
+    public TranslatorBasicInfoResponseDto updateBasicInfo(TranslatorBasicInfoRequestDto dto) {
+        User currentUser = userService.getCurrentUser();
+        TranslatorProfile profile = findProfileByUserIdOrThrow(currentUser.getId());
+
+        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
+            profileRepo.findByEmail(dto.getEmail().trim())
+                    .ifPresent(existing -> {
+                        if (!existing.getId().equals(profile.getId())) {
+                            throw new IllegalArgumentException("Email already in use");
+                        }
+                    });
+            profile.setEmail(dto.getEmail().trim());
+        }
+
+        if (dto.getDateOfBirth() != null) {
+            profile.setDateOfBirth(dto.getDateOfBirth());
+        }
+
+        profileRepo.save(profile);
+
+        return TranslatorBasicInfoResponseDto.builder()
+                .email(profile.getEmail())
+                .dateOfBirth(profile.getDateOfBirth())
+                .message("Basic information updated successfully")
+                .build();
+    }
+
+
 }
