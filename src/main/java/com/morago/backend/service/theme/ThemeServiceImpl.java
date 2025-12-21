@@ -12,6 +12,7 @@ import com.morago.backend.service.category.CategoryService;
 import com.morago.backend.service.file.FileService;
 import com.morago.backend.service.storage.StorageService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,14 +33,41 @@ public class ThemeServiceImpl implements ThemeService {
     private final StorageService storageService;
     private final FileRepository fileRepository;
 
+    @Value("${app.storage.public-base-url}")
+    private String publicBaseUrl;
+
+    private String toPublicUrl(String keyOrUrl) {
+        if (keyOrUrl == null || keyOrUrl.isBlank()) return null;
+
+        // if it already looks like a URL, keep it
+        if (keyOrUrl.startsWith("http://") || keyOrUrl.startsWith("https://")) return keyOrUrl;
+
+        return publicBaseUrl.endsWith("/")
+                ? publicBaseUrl + keyOrUrl
+                : publicBaseUrl + "/" + keyOrUrl;
+    }
+
+    private ThemeDto enrich(Theme theme) {
+        ThemeDto dto = themeMapper.toDto(theme);
+
+        // categoryId
+        dto.setCategoryId(theme.getCategory() != null ? theme.getCategory().getId() : null);
+
+        // iconUrl: mapper gives key/path -> convert to public URL
+        dto.setIconUrl(toPublicUrl(dto.getIconUrl()));
+
+        return dto;
+    }
+
+
     @Override
     @Transactional(readOnly = true)
     public Page<ThemeDto> listThemes(Pageable pageable, String q) {
         if (q != null && !q.isBlank()) {
             return themeRepository.findByNameContainingIgnoreCase(q.trim(), pageable)
-                    .map(themeMapper::toDto);
+                    .map(this::enrich);
         }
-        return themeRepository.findAll(pageable).map(themeMapper::toDto);
+        return themeRepository.findAll(pageable).map(this::enrich);
     }
 
     @Override
@@ -140,7 +168,7 @@ public class ThemeServiceImpl implements ThemeService {
     public List<ThemeDto> getActiveThemes() {
         return themeRepository.findAllByIsActiveTrueOrderByNameAsc()
                 .stream()
-                .map(themeMapper::toDto)
+                .map(this::enrich)
                 .toList();
     }
 }
