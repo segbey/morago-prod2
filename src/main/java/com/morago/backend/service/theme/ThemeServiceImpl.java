@@ -6,9 +6,11 @@ import com.morago.backend.entity.File;
 import com.morago.backend.entity.Theme;
 import com.morago.backend.exception.theme.ThemeNotFoundException;
 import com.morago.backend.mapper.ThemeMapper;
+import com.morago.backend.repository.FileRepository;
 import com.morago.backend.repository.ThemeRepository;
 import com.morago.backend.service.category.CategoryService;
 import com.morago.backend.service.file.FileService;
+import com.morago.backend.service.storage.StorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +29,8 @@ public class ThemeServiceImpl implements ThemeService {
     private final ThemeMapper themeMapper;
     private final FileService fileService;
     private final CategoryService categoryService;
+    private final StorageService storageService;
+    private final FileRepository fileRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -58,15 +62,19 @@ public class ThemeServiceImpl implements ThemeService {
 
         theme = themeRepository.save(theme);
 
+        String publicUrl = null;
         if (icon != null && !icon.isEmpty()) {
             FileResponse savedIcon = fileService.uploadThemeIcon(theme.getId(), icon);
             var fileEntity = fileService.findByIdOrThrow(savedIcon.id());
 
             theme.setIcon(fileEntity);
             theme = themeRepository.save(theme);
+            publicUrl = savedIcon.url();
         }
 
-        return themeMapper.toDto(theme);
+        ThemeDto out = themeMapper.toDto(theme);
+        if (publicUrl != null) out.setIconUrl(publicUrl);
+        return out;
     }
 
     @Override
@@ -89,15 +97,27 @@ public class ThemeServiceImpl implements ThemeService {
 
         theme = themeRepository.save(theme);
 
+        String publicUrl = null;
         if (icon != null && !icon.isEmpty()) {
+
+            File oldIcon = theme.getIcon();
+            if (oldIcon != null && oldIcon.getPath() != null) {
+                storageService.delete(oldIcon.getPath());
+                fileRepository.delete(oldIcon);
+                theme.setIcon(null);
+            }
+
             FileResponse newIcon = fileService.uploadThemeIcon(theme.getId(), icon);
             File fileEntity = fileService.findByIdOrThrow(newIcon.id());
 
             theme.setIcon(fileEntity);
             theme = themeRepository.save(theme);
+            publicUrl = newIcon.url();
         }
 
-        return themeMapper.toDto(theme);
+        ThemeDto out = themeMapper.toDto(theme);
+        if (publicUrl != null) out.setIconUrl(publicUrl);
+        return out;
     }
 
     @Override

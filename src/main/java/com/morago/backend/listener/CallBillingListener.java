@@ -4,6 +4,8 @@ import com.morago.backend.event.CallEndedEvent;
 import com.morago.backend.service.deposit.DepositService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -14,6 +16,7 @@ public class CallBillingListener {
 
     @TransactionalEventListener(
             phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onCallEnded(CallEndedEvent e) {
         depositService.chargeCallAndPay(e.clientId(), e.interpreterId(), e.callId(), e.amountWon());
     }
