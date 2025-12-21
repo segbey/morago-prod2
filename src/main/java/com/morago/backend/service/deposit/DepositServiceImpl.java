@@ -178,8 +178,15 @@ public class DepositServiceImpl implements DepositService {
         log.info("clientId={}, interpreterId={}, callId={}, amount={}",
                 clientId, interpreterId, callId, wonAmount);
 
+        String debitCorr  = callId + ":DEBIT";
+        String creditCorr = callId + ":CREDIT";
+
         // Check for duplicate
-        if (txnService.existsByCorrelationId(callId)) {
+//        if (txnService.existsByCorrelationId(callId)) {
+//            log.warn("Duplicate call charge detected: callId={}, skipping", callId);
+//            return;
+//        }
+        if (txnService.existsByCorrelationId(debitCorr) || txnService.existsByCorrelationId(creditCorr)) {
             log.warn("Duplicate call charge detected: callId={}, skipping", callId);
             return;
         }
@@ -235,7 +242,7 @@ public class DepositServiceImpl implements DepositService {
                 amt,
                 cBefore,
                 client.getBalance(),
-                callId,
+                debitCorr,
                 theme != null ?
                         String.format("Call charge (theme: %s)", theme.getName()) :
                         "Call charge",
@@ -255,7 +262,7 @@ public class DepositServiceImpl implements DepositService {
                 amt,
                 iBefore,
                 interp.getBalance(),
-                callId,
+                creditCorr,
                 theme != null ?
                         String.format("Call payout (theme: %s)", theme.getName()) :
                         "Call payout",

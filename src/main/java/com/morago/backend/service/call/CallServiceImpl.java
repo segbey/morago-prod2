@@ -303,6 +303,12 @@ public class CallServiceImpl implements CallService {
             return;
         }
 
+        if (call.isEndCall()) {
+            log.info("Call {} already ended; skipping.", callId);
+            return;
+        }
+
+
         LocalDateTime endTime = LocalDateTime.now();
         int durationMinutes = 0;
         BigDecimal totalCharge = BigDecimal.ZERO;
