@@ -12,7 +12,7 @@ server:
 app:
   storage:
     type: ${APP_STORAGE_TYPE:local}
-    public-base-url: ${APP_STORAGE_PUBLIC_BASE_URL:http://localhost:8080/uploads}
+    public-base-url: ${APP_STORAGE_PUBLIC_BASE_URL:}
     local:
       root: ${APP_STORAGE_LOCAL_ROOT:${USER_HOME:/tmp}/morago/uploads}
     s3:
