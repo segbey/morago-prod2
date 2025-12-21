@@ -36,16 +36,41 @@ public class ThemeServiceImpl implements ThemeService {
     @Value("${app.storage.public-base-url}")
     private String publicBaseUrl;
 
+    @Value("${app.storage.type:local}")
+    private String storageType;
+
+    @Value("${app.storage.s3.key-prefix:}")
+    private String keyPrefix;
+
+    private String normalize(String s) {
+        if (s == null || s.isBlank()) return "";
+        return s.replaceAll("^/+", "").replaceAll("/+$", "");
+    }
+
     private String toPublicUrl(String keyOrUrl) {
         if (keyOrUrl == null || keyOrUrl.isBlank()) return null;
 
-        // if it already looks like a URL, keep it
-        if (keyOrUrl.startsWith("http://") || keyOrUrl.startsWith("https://")) return keyOrUrl;
+        // already a full URL
+        if (keyOrUrl.startsWith("http://") || keyOrUrl.startsWith("https://")) {
+            return keyOrUrl;
+        }
 
-        return publicBaseUrl.endsWith("/")
-                ? publicBaseUrl + keyOrUrl
-                : publicBaseUrl + "/" + keyOrUrl;
+        String base = normalize(publicBaseUrl);
+        String key  = normalize(keyOrUrl);
+
+        // LOCAL storage → no prefix
+        if (!"s3".equalsIgnoreCase(storageType)) {
+            return base + "/" + key;
+        }
+
+        // S3 storage → include prefix if present
+        String prefix = normalize(keyPrefix);
+
+        return prefix.isEmpty()
+                ? base + "/" + key
+                : base + "/" + prefix + "/" + key;
     }
+
 
     private ThemeDto enrich(Theme theme) {
         ThemeDto dto = themeMapper.toDto(theme);
